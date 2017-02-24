@@ -41,7 +41,7 @@ const getAddTextMsg = function(_self, resolve, reject, convId, subject, content,
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":[]}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getAddParticipantsMsg = function(_self, resolve, reject, convId, participants) {
@@ -49,7 +49,7 @@ const getAddParticipantsMsg = function(_self, resolve, reject, convId, participa
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_PARTICIPANT","addParticipant":{"convId":"' + convId + '","locale":"EN_US","userId":' + participants + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGetConversationsMsg = function(_self, resolve, reject, date, direction, number) {
@@ -57,7 +57,7 @@ const getGetConversationsMsg = function(_self, resolve, reject, date, direction,
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_CONVERSATIONS","getConversations":{"userId":"' + _self.userId + '","modificationDate":' + date + ',"direction":"' + direction + '","number":' + number + ',"filter":"ALL"}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 
