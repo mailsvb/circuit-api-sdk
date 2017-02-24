@@ -280,9 +280,11 @@ Circuit.prototype.addParticipants = function(convId, participants) {
 };
 
 Circuit.prototype.addText = function(convId, subject, content, attachments) {
+    console.log('got here first!!!!!!');
     const _self = this;
     return new Promise((resolve, reject) => {
         _self.prepareAttachment(attachments, (attachments) => {
+            console.log('got here');
             _self.ws.send(getAddTextMsg(_self, resolve, reject, convId, subject, content, attachments));
         });
     });
@@ -294,6 +296,7 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
     let allFileIds = [];
     if (typeof attachments === 'undefined' || !attachments instanceof Array || attachments.length <= 0) {
         cb('');
+        return;
     }
     async.eachSeries(attachments, function(attachment, next) {
         let options = {
