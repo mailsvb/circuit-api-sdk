@@ -35,12 +35,12 @@ const getDoStuffMsg = function(_self) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
-const getAddTextMsg = function(_self, resolve, reject, convId, subject, content, attachment) {
+const getAddTextMsg = function(_self, resolve, reject, convId, parentId, subject, content, attachment) {
     (attachment == '') ? attachment = '[]' : attachment = attachment;
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
-    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":[]}}}}';
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":[],"parentId":"' + parentId + '"}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
@@ -75,15 +75,21 @@ const doHttpPost = function(options, data, cb) {
     req.end();
 };
 
-let Circuit = function(server, username, password) {
+let Circuit = function(data) {
     const _self         = this;
     this.connected      = false;
+    this.loginattempts  = 0;
     this.reqID          = 0;
-    this.server         = server;
-    this.credentials    = querystring.stringify({
-                            'username' : username,
-                            'password' : password
-                          });
+    this.server         = data.server;
+    if (data.username && data.password) {
+        this.credentials = querystring.stringify({
+                                'username' : data.username,
+                                'password' : data.password
+                              });
+    }
+    if (data.client_id && data.client_secret) {
+        this.basicauth = new Buffer(data.client_id + ":" + data.client_secret).toString('base64');
+    }
     this.cookie         = null;
     this.ws             = null;
     this.resolver       = {};
@@ -95,6 +101,8 @@ let Circuit = function(server, username, password) {
     };
     
     this.getCookie = () => {
+        _self.loginattempts += 1;
+        if (_self.loginattempts > 3) { return _self.rejecter['login']('too many login attempts. aborting'); }
         let options = {
             hostname: this.server,
             port: 443,
@@ -103,25 +111,65 @@ let Circuit = function(server, username, password) {
             rejectUnauthorized: false,
             headers: {
                 'User-Agent': 'Mozilla/5.0 Chrome/50',
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Content-Length': _self.credentials.length
+                'Content-Type': 'application/x-www-form-urlencoded'
             }
         };
+        let postData = '';
         
-        doHttpPost(options, _self.credentials, (headers, data, error) => {
+        if (_self.credentials) {
+            options.headers['Content-Length'] = _self.credentials.length;
+            postData = _self.credentials;
+        }
+        if (_self.basicauth) {
+            options.path = '/oauth/token';
+            options.headers['Authorization'] = 'Basic ' + _self.basicauth;
+            postData = 'grant_type=client_credentials&scope=ALL';
+        }
+        
+        doHttpPost(options, postData, (headers, data, error) => {
             if (error) {
-                _self.emit('error', error);
                 return _self.rejecter['login'](error);
             }
-            let cookieHeader = headers['set-cookie'].toString();
-            let regEx = /.*(connect\.sess=.*?);.*/i;
-            let found = cookieHeader.match(regEx);
-            if (found instanceof Array && found.length > 0) {
-                _self.cookie = found[1];
-                _self.getWS();
-            } else {
-                _self.emit('error', headers);
-                return _self.rejecter['login'](headers);
+            if (headers['set-cookie']) {
+                let cookieHeader = headers['set-cookie'].toString();
+                let regEx = /.*(connect\.sess=.*?);.*/i;
+                let found = cookieHeader.match(regEx);
+                if (found instanceof Array && found.length > 0) {
+                    _self.cookie = found[1];
+                    _self.getWS();
+                } else {
+                    return _self.rejecter['login'](headers);
+                }
+            }
+            else {
+                try {
+                    data = JSON.parse(data.toString());
+                    if (data instanceof Object && data.access_token) {
+                        options.path = '/sdklogin';
+                        options.headers['Authorization'] = 'Bearer ' + data.access_token;
+                        postData = 'accessToken=' + data.access_token + '&persistent=false';
+                        doHttpPost(options, postData, (headers, data, error) => {
+                            if (error) {
+                                return _self.rejecter['login'](error);
+                            }
+                            let cookieHeader = headers['set-cookie'].toString();
+                            let regEx = /.*(connect\.sess=.*?);.*/i;
+                            let found = cookieHeader.match(regEx);
+                            if (found instanceof Array && found.length > 0) {
+                                _self.cookie = found[1];
+                                _self.getWS();
+                            } else {
+                                return _self.rejecter['login'](headers);
+                            }
+                        });
+                    }
+                    else {
+                        return _self.rejecter['login'](data);
+                    }
+                }
+                catch(e) {
+                    return _self.rejecter['login'](error);
+                }
             }
         });
     };
@@ -144,6 +192,7 @@ Circuit.prototype.wsopen = function() {
     const _self = this;
     _self.connected = true;
     _self.emit('log', 'API connection established.');
+    _self.loginattempts = 0;
     _self.ws.send(getStartupMsg(_self));
     _self.ws.send(getDoStuffMsg(_self));
     _self.pingInterval = setInterval(() => {
@@ -152,14 +201,13 @@ Circuit.prototype.wsopen = function() {
             _self.ws.send('PING');
         }
     }, 180000);
-    return _self.resolver['login']();
 };
 
 Circuit.prototype.wsmessage = function(data, flags) {
     const _self = this;
     try {
+        _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\n' + data.toString());
         data = JSON.parse(data.toString());
-        _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\n' + util.inspect(data, { showHidden: true, depth: null, breakLength: 'Infinity' }));
         if (data.msgType == 'RESPONSE' && data.response.type == 'VERSION') {
             _self.emit('log', 'Backend API version: ' + data.response.version.getVersion.version);
         }
@@ -170,6 +218,7 @@ Circuit.prototype.wsmessage = function(data, flags) {
                 _self.displayName = data.response.user.getStuff.user.displayName;
             }
             _self.emit('log', 'Logged in as: ' + data.response.user.getStuff.user.displayName);
+            return _self.resolver['login']();
         }
         if (data.msgType == 'RESPONSE' && _self.resolver.hasOwnProperty(data.response.requestId) && _self.rejecter.hasOwnProperty(data.response.requestId)) {
             let resolve = _self.resolver[data.response.requestId];
@@ -265,10 +314,14 @@ Circuit.prototype.login = function() {
     });
 };
 
-Circuit.prototype.getConversations = function(date, direction, number) {
+Circuit.prototype.getConversations = function(data = {}) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getGetConversationsMsg(_self, resolve, reject, date, direction, number));
+        _self.ws.send(getGetConversationsMsg(_self, resolve, reject, 
+                                                ((data.date) ? data.date : new Date().getTime()),
+                                                ((data.direction) ? data.direction : 'BEFORE'),
+                                                ((data.number) ? data.number : '25'))
+                                            );
     });
 };
 
@@ -279,13 +332,16 @@ Circuit.prototype.addParticipants = function(convId, participants) {
     });
 };
 
-Circuit.prototype.addText = function(convId, subject, content, attachments) {
-    console.log('got here first!!!!!!');
+Circuit.prototype.addText = function(convId, msg) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.prepareAttachment(attachments, (attachments) => {
-            console.log('got here');
-            _self.ws.send(getAddTextMsg(_self, resolve, reject, convId, subject, content, attachments));
+        _self.prepareAttachment(((msg.attachments) ? msg.attachments : ''), (attachments) => {
+            _self.ws.send(getAddTextMsg(_self, resolve, reject, convId,
+                                            ((msg.parentId) ? msg.parentId : ''),
+                                            ((msg.subject) ? msg.subject : ''),
+                                            ((msg.content) ? msg.content : ''),
+                                            attachments)
+                                        );
         });
     });
 };
@@ -315,11 +371,13 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
                 'Content-Length': attachment.data.length
             }
         };
+        _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(options, { showHidden: true, depth: null, breakLength: 'Infinity' }));
         doHttpPost(options, attachment.data, (headers, data, error) => {
             if (!data instanceof Array && !data.length == 1) {
                 next();
             }
             try {
+                _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\n' + data.toString());
                 let d = JSON.parse(data.toString())[0];
                 // check from response, which fileid is the new one
                 for (j=0; j < d.fileid.length; j++) {
@@ -335,7 +393,6 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
                     mimeType: d.mimeType,
                     size: attachment.data.length
                 });
-                _self.emit('log', 'uploaded: ' + attachment.name);
                 next();
             }
             catch(e) {
