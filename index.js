@@ -292,7 +292,7 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
     const _self = this;
     let attached = [];
     let allFileIds = [];
-    if (!attachments instanceof Array || attachments.length <= 0) {
+    if (typeof attachments === 'undefined' || !attachments instanceof Array || attachments.length <= 0) {
         cb('');
     }
     async.eachSeries(attachments, function(attachment, next) {
