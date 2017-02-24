@@ -40,7 +40,7 @@ const getAddTextMsg = function(_self, resolve, reject, convId, parentId, subject
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
-    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":[],"parentId":"' + parentId + '"}}}}';
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":[]' + ((parentId) ? (',"parentId":"' + parentId + '"') : '' ) + '}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
@@ -337,7 +337,7 @@ Circuit.prototype.addText = function(convId, msg) {
     return new Promise((resolve, reject) => {
         _self.prepareAttachment(((msg.attachments) ? msg.attachments : ''), (attachments) => {
             _self.ws.send(getAddTextMsg(_self, resolve, reject, convId,
-                                            ((msg.parentId) ? msg.parentId : ''),
+                                            ((msg.parentId) ? msg.parentId : false),
                                             ((msg.subject) ? msg.subject : ''),
                                             ((msg.content) ? msg.content : ''),
                                             attachments)
