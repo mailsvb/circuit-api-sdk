@@ -1,0 +1,344 @@
+const util          = require('util');
+const EventEmitter  = require('events').EventEmitter;
+const NodeWebSocket = require('ws');
+const https         = require('https');
+const fs            = require('fs');
+const url           = require('url');
+const querystring   = require('querystring');
+const uuid          = require('uuid/v1');
+const async         = require('async');
+const Entities      = require('html-entities').AllHtmlEntities;
+const entities      = new Entities();
+
+const getDate = function(date) {
+	var now = date || (new Date());
+	var MM = (now.getMonth() + 1);
+		if (MM < 10) { MM = '0' + MM; }
+	var DD = now.getDate();
+		if (DD < 10) { DD = '0' + DD; }
+	var H = now.getHours();
+		if (H < 10) { H = '0' + H; }
+	var M = now.getMinutes();
+		if (M < 10) { M = '0' + M; }
+	var S = now.getSeconds();
+		if (S < 10) { S = '0' + S; }
+	return DD + "." + MM + "." + now.getFullYear() + " - " + H + ":" + M + ":" + S;
+};
+
+const getStartupMsg = function(_self) {
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"VERSION","version":{"type":"GET_VERSION"}}}';
+    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
+const getDoStuffMsg = function(_self) {
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"GET_STUFF","getStuff":{"types":["USER","PRESENCE_STATE"]}}}}';
+    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
+const getAddTextMsg = function(_self, resolve, reject, convId, subject, content, attachment) {
+    (attachment == '') ? attachment = '[]' : attachment = attachment;
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":[]}}}}';
+    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
+const getAddParticipantsMsg = function(_self, resolve, reject, convId, participants) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_PARTICIPANT","addParticipant":{"convId":"' + convId + '","locale":"EN_US","userId":' + participants + '}}}}';
+    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
+const getGetConversationsMsg = function(_self, resolve, reject, date, direction, number) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_CONVERSATIONS","getConversations":{"userId":"' + _self.userId + '","modificationDate":' + date + ',"direction":"' + direction + '","number":' + number + ',"filter":"ALL"}}}}';
+    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
+
+const doHttpPost = function(options, data, cb) {
+    let req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (d) => data += d);
+        res.on('end', () => cb(res.headers, data, null));
+    });
+    req.on('error', (e) => {
+        cb(null, null, e);
+    });
+    req.setTimeout(15000, () => cb(null, null, 'request timeout'));
+    req.write(data);
+    req.end();
+};
+
+let Circuit = function(server, username, password) {
+    const _self         = this;
+    this.connected      = false;
+    this.reqID          = 0;
+    this.server         = server;
+    this.credentials    = querystring.stringify({
+                            'username' : username,
+                            'password' : password
+                          });
+    this.cookie         = null;
+    this.ws             = null;
+    this.resolver       = {};
+    this.rejecter       = {};
+    
+    this.nextReqID = function() {
+        this.reqID += 1;
+        return this.reqID;
+    };
+    
+    this.getCookie = () => {
+        let options = {
+            hostname: this.server,
+            port: 443,
+            path: '/mobilelogin',
+            method: 'POST',
+            rejectUnauthorized: false,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 Chrome/50',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Length': _self.credentials.length
+            }
+        };
+        
+        doHttpPost(options, _self.credentials, (headers, data, error) => {
+            if (error) {
+                _self.emit('error', error);
+            }
+            let cookieHeader = headers['set-cookie'].toString();
+            let regEx = /.*(connect\.sess=.*?);.*/i;
+            let found = cookieHeader.match(regEx);
+            if (found instanceof Array && found.length > 0) {
+                _self.cookie = found[1];
+                _self.getWS();
+            } else {
+                _self.emit('error', headers);
+            }
+        });
+    };
+    
+    this.getWS = () => {
+        _self.emit('log', 'trying to connect to API');
+        let wsOptions = {headers: {Cookie: _self.cookie}, rejectUnauthorized: false};
+        _self.ws = new NodeWebSocket('wss://' + _self.server + '/api', wsOptions);
+        _self.ws.on('open', () => _self.wsopen());
+        _self.ws.on('message', (data, flags) => _self.wsmessage(data, flags));
+        _self.ws.on('error', (error) => _self.wserror(error));
+        _self.ws.on('ping', (data, flags) => _self.wsping(data, flags));
+        _self.ws.on('pong', (data, flags) => _self.wspong(data, flags));
+        _self.ws.on('close', (code, msg) => _self.wsclose(code, msg));
+    };
+};
+util.inherits(Circuit, EventEmitter);
+
+Circuit.prototype.wsopen = function() {
+    const _self = this;
+    _self.connected = true;
+    _self.emit('log', 'API connection established.');
+    _self.ws.send(getStartupMsg(_self));
+    _self.ws.send(getDoStuffMsg(_self));
+    _self.pingInterval = setInterval(() => {
+        _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\nPING');
+        if (_self.connected) {
+            _self.ws.send('PING');
+        }
+    }, 180000);
+    _self.emit('login');
+};
+
+Circuit.prototype.wsmessage = function(data, flags) {
+    const _self = this;
+    try {
+        data = JSON.parse(data.toString());
+        _self.emit('api', '<<<<< ' + getDate() + ' <<<<<\n' + util.inspect(data, { showHidden: true, depth: null, breakLength: 'Infinity' }));
+        if (data.msgType == 'RESPONSE' && data.response.type == 'VERSION') {
+            _self.emit('log', 'Backend API version: ' + data.response.version.getVersion.version);
+        }
+        if (data.msgType == 'RESPONSE' && data.response.type == 'USER' && data.response.user.type == 'GET_STUFF') {
+            if (data.response.user.getStuff.user) {
+                _self.clientId = data.clientId;
+                _self.userId = data.response.user.getStuff.user.userId;
+                _self.displayName = data.response.user.getStuff.user.displayName;
+            }
+            _self.emit('log', 'Logged in as: ' + data.response.user.getStuff.user.displayName);
+        }
+        if (data.msgType == 'RESPONSE' && _self.resolver.hasOwnProperty(data.response.requestId) && _self.rejecter.hasOwnProperty(data.response.requestId)) {
+            let resolve = _self.resolver[data.response.requestId];
+            let reject  = _self.rejecter[data.response.requestId];
+            delete _self.resolver[data.response.requestId];
+            delete _self.rejecter[data.response.requestId];
+            if (data.response.code == 'OK') {
+                switch (data.response.type) {
+                    case 'CONVERSATION':
+                        switch (data.response.conversation.type) {
+                            case 'ADD_TEXT_ITEM':
+                                return resolve(data.response.conversation.addTextItem);
+                                break;
+                            case 'ADD_PARTICIPANT':
+                                return resolve(data.response.conversation.addParticipant);
+                                break;
+                            case 'GET_CONVERSATIONS':
+                                return resolve(data.response.conversation.getConversations);
+                                break;
+                            default:
+                                return resolve(data.response.conversation);
+                        }
+                        break;
+                    default:
+                        return resolve(data.response);
+                }
+            }
+            else {
+                return reject(data.response);
+            }
+        }
+        if (data.msgType == 'EVENT') {
+            if (data.event.type == 'USER') {
+                if (data.event.user.type == 'USER_PRESENCE_CHANGE') {
+                    _self.emit('presence', data.event.user.presenceChanged);
+                }
+            }
+            if (data.event.type == 'CONVERSATION') {
+                if (data.event.conversation.type == 'ADD_ITEM') {
+                    _self.emit('itemAdded', data.event.conversation.addItem);
+                }
+                if (data.event.conversation.type == 'UPDATE_ITEM') {
+                    _self.emit('itemUpdated', data.event.conversation.updateItem);
+                }
+            }
+        }
+    }
+    catch(e) {
+        _self.emit('error', e);
+    }
+};
+
+Circuit.prototype.wserror = function(error) {
+    const _self = this;
+    if (error.message.match(/401/)) {
+        _self.cookie = '';
+    }
+    _self.emit('error', error.message);
+};
+
+Circuit.prototype.wsping = function(data, flags) {
+    const _self = this;
+    _self.emit('log', 'websocket ping: ' + data);
+};
+
+Circuit.prototype.wspong = function(data, flags) {
+    const _self = this;
+    _self.emit('log', 'websocket pong: ' + data);
+};
+
+Circuit.prototype.wsclose = function(code, msg) {
+    const _self = this;
+    _self.emit('error', '(' + code + ') "' + msg + '"');
+    clearInterval(_self.pingInterval);
+    if (_self.cookie == '') {
+        _self.getCookie();
+    } else {
+        _self.getWS();
+    }
+};
+
+Circuit.prototype.encode = function(msg) {
+    return entities.encodeNonUTF(msg);
+};
+
+Circuit.prototype.login = function(cb) {
+    const _self = this;
+    _self.emit('log', 'trying to login with given credentials at: ' + _self.server);
+    _self.getCookie();
+};
+
+Circuit.prototype.getConversations = function(date, direction, number) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getGetConversationsMsg(_self, resolve, reject, date, direction, number));
+    });
+};
+
+Circuit.prototype.addParticipants = function(convId, participants) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getAddParticipantsMsg(_self, resolve, reject, convId, participants));
+    });
+};
+
+Circuit.prototype.addText = function(convId, subject, content, attachments) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getAddTextMsg(_self, resolve, reject, convId, subject, content, attachments));
+    });
+};
+
+Circuit.prototype.prepareAttachment = function(attachments, cb) {
+    const _self = this;
+    let attached = [];
+    let allFileIds = [];
+    if (!attachments instanceof Array || attachments.length <= 0) {
+        return null;
+    }
+    async.eachSeries(attachments, function(attachment, next) {
+        let options = {
+            hostname: _self.server,
+            port: 443,
+            // itemid is the same for all requests belonging to 1 conversation entry
+            path: '/fileapi?itemid=' + ((attached.length == 0) ? 'NULL' : attached[0].itemId),
+            method: 'POST',
+            rejectUnauthorized: false,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 Chrome/50',
+                //content-type not required. file-api will tell us :-P
+                //'Content-Type': attachment.type,
+                'Content-Disposition': 'attachment; filename="' + attachment.name + '"',
+                'Cookie': _self.cookie,
+                'Content-Length': attachment.data.length
+            }
+        };
+        doHttpPost(options, attachment.data, (headers, data, error) => {
+            if (!data instanceof Array && !data.length == 1) {
+                next();
+            }
+            try {
+                let d = JSON.parse(data.toString())[0];
+                // check from response, which fileid is the new one
+                for (j=0; j < d.fileid.length; j++) {
+                    if (allFileIds.indexOf(d.fileid[j]) < 0) {
+                        allFileIds.push(d.fileid[j]);
+                        break;
+                    }
+                }
+                attached.push({
+                    itemId: d.id,
+                    fileId: d.fileid[j],
+                    fileName: attachment.name,
+                    mimeType: d.mimeType,
+                    size: attachment.data.length
+                });
+                _self.emit('log', 'uploaded: ' + attachment.name);
+                next();
+            }
+            catch(e) {
+                _self.emit('error', e);
+                next();
+            }
+        });
+    },
+    function(e) {
+        if (e) {
+            _self.emit('error', e);
+        }
+        cb(JSON.stringify(attached));
+    });
+}
+
+module.exports = Circuit;
