@@ -27,12 +27,12 @@ const getDate = function(date) {
 
 const getStartupMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"VERSION","version":{"type":"GET_VERSION"}}}';
-    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getDoStuffMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"GET_STUFF","getStuff":{"types":["USER","PRESENCE_STATE"]}}}}';
-    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getAddTextMsg = function(_self, resolve, reject, convId, subject, content, attachment) {
@@ -41,7 +41,7 @@ const getAddTextMsg = function(_self, resolve, reject, convId, subject, content,
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":[]}}}}';
-    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getAddParticipantsMsg = function(_self, resolve, reject, convId, participants) {
@@ -49,7 +49,7 @@ const getAddParticipantsMsg = function(_self, resolve, reject, convId, participa
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_PARTICIPANT","addParticipant":{"convId":"' + convId + '","locale":"EN_US","userId":' + participants + '}}}}';
-    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getGetConversationsMsg = function(_self, resolve, reject, date, direction, number) {
@@ -57,7 +57,7 @@ const getGetConversationsMsg = function(_self, resolve, reject, date, direction,
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_CONVERSATIONS","getConversations":{"userId":"' + _self.userId + '","modificationDate":' + date + ',"direction":"' + direction + '","number":' + number + ',"filter":"ALL"}}}}';
-    _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 
@@ -111,6 +111,7 @@ let Circuit = function(server, username, password) {
         doHttpPost(options, _self.credentials, (headers, data, error) => {
             if (error) {
                 _self.emit('error', error);
+                return _self.rejecter['login'](error);
             }
             let cookieHeader = headers['set-cookie'].toString();
             let regEx = /.*(connect\.sess=.*?);.*/i;
@@ -120,6 +121,7 @@ let Circuit = function(server, username, password) {
                 _self.getWS();
             } else {
                 _self.emit('error', headers);
+                return _self.rejecter['login'](headers);
             }
         });
     };
@@ -145,19 +147,19 @@ Circuit.prototype.wsopen = function() {
     _self.ws.send(getStartupMsg(_self));
     _self.ws.send(getDoStuffMsg(_self));
     _self.pingInterval = setInterval(() => {
-        _self.emit('api', '>>>>> ' + getDate() + ' >>>>>\nPING');
+        _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\nPING');
         if (_self.connected) {
             _self.ws.send('PING');
         }
     }, 180000);
-    _self.emit('login');
+    return _self.resolver['login']();
 };
 
 Circuit.prototype.wsmessage = function(data, flags) {
     const _self = this;
     try {
         data = JSON.parse(data.toString());
-        _self.emit('api', '<<<<< ' + getDate() + ' <<<<<\n' + util.inspect(data, { showHidden: true, depth: null, breakLength: 'Infinity' }));
+        _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\n' + util.inspect(data, { showHidden: true, depth: null, breakLength: 'Infinity' }));
         if (data.msgType == 'RESPONSE' && data.response.type == 'VERSION') {
             _self.emit('log', 'Backend API version: ' + data.response.version.getVersion.version);
         }
@@ -253,10 +255,14 @@ Circuit.prototype.encode = function(msg) {
     return entities.encodeNonUTF(msg);
 };
 
-Circuit.prototype.login = function(cb) {
+Circuit.prototype.login = function() {
     const _self = this;
     _self.emit('log', 'trying to login with given credentials at: ' + _self.server);
-    _self.getCookie();
+    return new Promise((resolve, reject) => {
+        _self.resolver['login'] = resolve;
+        _self.rejecter['login'] = reject;
+        _self.getCookie();
+    });
 };
 
 Circuit.prototype.getConversations = function(date, direction, number) {
@@ -276,7 +282,9 @@ Circuit.prototype.addParticipants = function(convId, participants) {
 Circuit.prototype.addText = function(convId, subject, content, attachments) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getAddTextMsg(_self, resolve, reject, convId, subject, content, attachments));
+        _self.prepareAttachment(attachments, (attachments) => {
+            _self.ws.send(getAddTextMsg(_self, resolve, reject, convId, subject, content, attachments));
+        });
     });
 };
 
@@ -285,7 +293,7 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
     let attached = [];
     let allFileIds = [];
     if (!attachments instanceof Array || attachments.length <= 0) {
-        return null;
+        cb('');
     }
     async.eachSeries(attachments, function(attachment, next) {
         let options = {
