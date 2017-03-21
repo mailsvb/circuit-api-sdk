@@ -11,7 +11,7 @@ Usage:
 ```javascript
 const Circuit = require('circuit-api-sdk');
 const fs = require('fs');
-let con = new Circuit('circuitsandbox.net', 'user@email.com', 'your-password');
+let con = new Circuit({server:'circuitsandbox.net',username:'user@email.com',password:'your-password'});
 
 // generic listener
 con.on('log', console.log);
@@ -42,6 +42,24 @@ con.login()
                 console.error(err);
             });
         
+        // get userId's from email address (array of user email addresses)
+        con.getUsersByMail(["user1@email.com", "user2@email.com"])
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+            
+        // create group conversation (array of userIds, optional title)
+        con.createGroupConv(['12345678-90ab-cdef-1234-567890abcdef','12345678-90ab-cdef-1234-567890abcdef'], 'Group conv title')
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
         // add participants to conversation (conversation ID, array of user IDs)
         con.addParticipants('12345678-90ab-cdef-1234-567890abcdef', '["12345678-90ab-cdef-1234-567890abcdef", "12345678-90ab-cdef-1234-567890abcdef"]')
             .then(res => {
@@ -51,8 +69,26 @@ con.login()
                 console.error(err);
             });
         
-        // add text to conversation without attachment (conversation ID, subject, content, array of attachments)
-        con.addText('12345678-90ab-cdef-1234-567890abcdef', 'Subject', '<b><i>Content</i></b>', '')
+        // become a moderator of a conversation
+        con.moderation('12345678-90ab-cdef-1234-567890abcdef')
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+            
+        // set other users as moderators of a conversation
+        con.setModerators('12345678-90ab-cdef-1234-567890abcdef', ["12345678-90ab-cdef-1234-567890abcdef", "12345678-90ab-cdef-1234-567890abcdef"])
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
+        // add simple text to conversation
+        con.addText('12345678-90ab-cdef-1234-567890abcdef', '<b><i>Content</i></b>')
             .then(res => {
                 console.log(res);
             })
@@ -60,12 +96,16 @@ con.login()
                 console.error(err);
             });
                 
-        // add text to conversation including attachment(conversation ID, subject, content, array of attachments)
-        let attachments = [
-                            {name: 'Slides.pdf', data: fs.readFileSync('./some-pdf-file.pdf')},
-                            {name: 'Screenshot.png', data: fs.readFileSync('./some-screenshot.png')},
-                         ];
-        con.addText('12345678-90ab-cdef-1234-567890abcdef', 'Subject', '<b><i>Content</i></b>', attachments)
+        // add text including subject with optional attachment(object with parentId, subject, content and array of attachments)
+        let msg = {
+            parentId: '12345678-90ab-cdef-1234-567890abcdef',
+            subject: 'Subject',
+            content: '<b><i>Content</i></b>',
+            attachments =   [
+                                {name: 'Slides.pdf', data: fs.readFileSync('./some-pdf-file.pdf')},
+                                {name: 'Screenshot.png', data: fs.readFileSync('./some-screenshot.png')},
+                            ];
+        con.addText('12345678-90ab-cdef-1234-567890abcdef', msg)
             .then(res => {
                 console.log(res);
             })
