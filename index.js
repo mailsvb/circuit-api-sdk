@@ -31,7 +31,7 @@ const getStartupMsg = function(_self) {
     return r;
 };
 const getDoStuffMsg = function(_self) {
-    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"GET_STUFF","getStuff":{"types":["USER","PRESENCE_STATE"]}}}}';
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"GET_STUFF","getStuff":{"types":["USER","ACCOUNTS","PRESENCE_STATE"]}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
@@ -57,6 +57,38 @@ const getGetConversationsMsg = function(_self, resolve, reject, date, direction,
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_CONVERSATIONS","getConversations":{"userId":"' + _self.userId + '","modificationDate":' + date + ',"direction":"' + direction + '","number":' + number + ',"filter":"ALL"}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
+const getGetUsersByMailMsg = function(_self, resolve, reject, mail) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"GET_USERS_BY_MAILS","getUsersByMails":{"emailAddresses":' + mail + ',"excludeRoles":["SUPPORT"]}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
+const getCreateGroupConvMsg = function(_self, resolve, reject, participants, topic) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"CREATE","create":{"type":"GROUP","topic":"' + topic + '","participants":' + participants + '}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
+const getModeratorConvMsg = function(_self, resolve, reject, convId) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"MODERATE_CONVERSATION","moderateConversation":{"convId":"' + convId + '"}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
+const getGrantModeratorConvMsg = function(_self, resolve, reject, convId, userIds) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GRANT_MODERATOR_RIGHTS","grantModeratorRights":{"convId":"' + convId + '","userId":' + userIds + '}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
@@ -238,10 +270,30 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             case 'GET_CONVERSATIONS':
                                 return resolve(data.response.conversation.getConversations);
                                 break;
+                            case 'CREATE':
+                                return resolve(data.response.conversation.create.conversation);
+                                break;
+                            case 'MODERATE_CONVERSATION':
+                                return resolve(data.response.conversation.moderateResult);
+                                break;
+                            case 'GRANT_MODERATOR_RIGHTS':
+                                return resolve(data.response.conversation.grantModeratorRightsResult);
+                                break;
                             default:
                                 return resolve(data.response.conversation);
                         }
                         break;
+                        
+                    case 'USER':
+                        switch (data.response.user.type) {
+                            case 'GET_USERS_BY_MAILS':
+                                return resolve(data.response.user.getUsersByMails.users);
+                                break;
+                            default:
+                                return resolve(data.response.user);
+                        }
+                        break;
+                        
                     default:
                         return resolve(data.response);
                 }
@@ -325,6 +377,48 @@ Circuit.prototype.getConversations = function(data = {}) {
     });
 };
 
+Circuit.prototype.moderation = function(convId) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getModeratorConvMsg(_self, resolve, reject, convId));
+    });
+};
+
+Circuit.prototype.setModerators = function(convId, userIds) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getGrantModeratorConvMsg(_self, resolve, reject, convId, JSON.stringify(userIds)));
+    });
+};
+
+Circuit.prototype.createGroupConv = function(participants, topic) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        if (typeof participants === 'undefined' || !participants instanceof Array || participants.length <= 0) {
+            return reject(util.inspect(participants, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of user IDs');
+        }
+        if (typeof topic === 'undefined' || !topic instanceof String) {
+            topic = '';
+        }
+        let userIds = [];
+        participants.forEach(id => {
+            userIds.push({userId:id});
+        });
+        userIds.push({userId:_self.userId});
+        _self.ws.send(getCreateGroupConvMsg(_self, resolve, reject, JSON.stringify(userIds), topic));
+    });
+};
+
+Circuit.prototype.getUsersByMail = function(mail) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        if (typeof mail === 'undefined' || !mail instanceof Array || mail.length <= 0) {
+            return reject(util.inspect(mail, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of mail addresses');
+        }
+        _self.ws.send(getGetUsersByMailMsg(_self, resolve, reject, JSON.stringify(mail)));
+    });
+};
+
 Circuit.prototype.addParticipants = function(convId, participants) {
     const _self = this;
     return new Promise((resolve, reject) => {
@@ -339,7 +433,7 @@ Circuit.prototype.addText = function(convId, msg) {
             _self.ws.send(getAddTextMsg(_self, resolve, reject, convId,
                                             ((msg.parentId) ? msg.parentId : false),
                                             ((msg.subject) ? msg.subject : ''),
-                                            ((msg.content) ? msg.content : ''),
+                                            ((msg.content) ? msg.content : ((typeof msg === 'string') ? msg : '')),
                                             attachments)
                                         );
         });
