@@ -78,7 +78,7 @@ con.login()
                 console.error(err);
             });
         
-        // become a moderator of a conversation
+        // become a moderator of a conversation (conversation ID)
         con.moderation('12345678-90ab-cdef-1234-567890abcdef')
             .then(res => {
                 console.log(res);
@@ -87,8 +87,17 @@ con.login()
                 console.error(err);
             });
             
-        // set other users as moderators of a conversation
+        // set other users as moderators of a conversation (conversation ID, array of user IDs)
         con.setModerators('12345678-90ab-cdef-1234-567890abcdef', ["12345678-90ab-cdef-1234-567890abcdef", "12345678-90ab-cdef-1234-567890abcdef"])
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
+        // disable guest access for a group conversation (conversation ID, 'true' / 'false')
+        con.disableGuestAccess('12345678-90ab-cdef-1234-567890abcdef', 'true')
             .then(res => {
                 console.log(res);
             })

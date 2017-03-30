@@ -98,6 +98,14 @@ const getModeratorConvMsg = function(_self, resolve, reject, convId) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
+const getGuestAccessDisabledMsg = function(_self, resolve, reject, convId, disabled) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"UPDATE_GUEST_ACCESS","updateGuestAccess":{"convId":"' + convId + '","guestAccessDisabled":' + disabled + '}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
 const getGrantModeratorConvMsg = function(_self, resolve, reject, convId, userIds) {
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
@@ -294,6 +302,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             case 'GRANT_MODERATOR_RIGHTS':
                                 return resolve(data.response.conversation.grantModeratorRightsResult);
                                 break;
+                            case 'UPDATE_GUEST_ACCESS':
+                                return resolve(data.response.conversation.updateGuestAccessResult);
+                                break;
                             default:
                                 return resolve(data.response.conversation);
                         }
@@ -445,6 +456,13 @@ Circuit.prototype.addRTCParticipants = function(RTCsession, participants) {
     const _self = this;
     return new Promise((resolve, reject) => {
         _self.ws.send(getAddRTCParticipantsMsg(_self, resolve, reject, RTCsession, participants));
+    });
+};
+
+Circuit.prototype.disableGuestAccess = function(convId, disabled) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getGuestAccessDisabledMsg(_self, resolve, reject, convId, disabled));
     });
 };
 
