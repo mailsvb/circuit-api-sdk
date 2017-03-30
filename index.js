@@ -9,6 +9,7 @@ const uuid          = require('uuid/v1');
 const async         = require('async');
 const Entities      = require('html-entities').AllHtmlEntities;
 const entities      = new Entities();
+const user_agent    = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.0000.00';
 
 const getDate = function(date) {
 	var now = date || (new Date());
@@ -25,6 +26,11 @@ const getDate = function(date) {
 	return DD + "." + MM + "." + now.getFullYear() + " - " + H + ":" + M + ":" + S;
 };
 
+const getLogonMsg = function(_self) {
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"LOGON","logon":{"clientDisplayname":"TEST","info":{"deviceType":["WEB"],"manufacturer":"Unify","osVersion":"Win10"}}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
 const getStartupMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"VERSION","version":{"type":"GET_VERSION"}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
@@ -49,6 +55,14 @@ const getAddParticipantsMsg = function(_self, resolve, reject, convId, participa
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_PARTICIPANT","addParticipant":{"convId":"' + convId + '","locale":"EN_US","userId":' + participants + '}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
+const getAddRTCParticipantsMsg = function(_self, resolve, reject, RTCsession, participants) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"RTC_SESSION","rtcSession":{"type":"ADD_PARTICIPANT","addParticipant":{"rtcSessionId":"' + RTCsession + '","userId":"' + participants + '","mediaType":["AUDIO","VIDEO"]}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
@@ -142,7 +156,7 @@ let Circuit = function(data) {
             method: 'POST',
             rejectUnauthorized: false,
             headers: {
-                'User-Agent': 'Mozilla/5.0 Chrome/50',
+                'User-Agent': user_agent,
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         };
@@ -208,7 +222,7 @@ let Circuit = function(data) {
     
     this.getWS = () => {
         _self.emit('log', 'trying to connect to API');
-        let wsOptions = {headers: {Cookie: _self.cookie}, rejectUnauthorized: false};
+        let wsOptions = {headers: {Cookie: _self.cookie,'User-Agent': user_agent}, rejectUnauthorized: false};
         _self.ws = new NodeWebSocket('wss://' + _self.server + '/api', wsOptions);
         _self.ws.on('open', () => _self.wsopen());
         _self.ws.on('message', (data, flags) => _self.wsmessage(data, flags));
@@ -225,6 +239,7 @@ Circuit.prototype.wsopen = function() {
     _self.connected = true;
     _self.emit('log', 'API connection established.');
     _self.loginattempts = 0;
+    //_self.ws.send(getLogonMsg(_self));
     _self.ws.send(getStartupMsg(_self));
     _self.ws.send(getDoStuffMsg(_self));
     _self.pingInterval = setInterval(() => {
@@ -426,6 +441,13 @@ Circuit.prototype.addParticipants = function(convId, participants) {
     });
 };
 
+Circuit.prototype.addRTCParticipants = function(RTCsession, participants) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getAddRTCParticipantsMsg(_self, resolve, reject, RTCsession, participants));
+    });
+};
+
 Circuit.prototype.addText = function(convId, msg) {
     const _self = this;
     return new Promise((resolve, reject) => {
@@ -457,7 +479,7 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
             method: 'POST',
             rejectUnauthorized: false,
             headers: {
-                'User-Agent': 'Mozilla/5.0 Chrome/50',
+                'User-Agent': user_agent,
                 //content-type not required. file-api will tell us :-P
                 //'Content-Type': attachment.type,
                 'Content-Disposition': 'attachment; filename="' + attachment.name + '"',

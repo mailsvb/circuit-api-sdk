@@ -69,6 +69,15 @@ con.login()
                 console.error(err);
             });
         
+        // add participants to RTC event (conversation ID, user IDs)
+        con.addRTCParticipants('12345678-90ab-cdef-1234-567890abcdef', '12345678-90ab-cdef-1234-567890abcdef')
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
         // become a moderator of a conversation
         con.moderation('12345678-90ab-cdef-1234-567890abcdef')
             .then(res => {
