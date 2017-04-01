@@ -74,6 +74,14 @@ const getGetConversationsMsg = function(_self, resolve, reject, date, direction,
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
+const getGetConversationByIdMsg = function(_self, resolve, reject, convid) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_CONVERSATION_BY_ID","getConversationById":{"convId":"' + convid + '"}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
 const getGetUsersByMailMsg = function(_self, resolve, reject, mail) {
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
@@ -321,6 +329,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             case 'UPDATE_GUEST_ACCESS':
                                 return resolve(data.response.conversation.updateGuestAccessResult);
                                 break;
+                            case 'GET_CONVERSATION_BY_ID':
+                                return resolve(data.response.conversation.getConversationById.conversation);
+                                break;
                             default:
                                 return resolve(data.response.conversation);
                         }
@@ -433,6 +444,13 @@ Circuit.prototype.getConversations = function(data = {}) {
                                                 ((data.direction) ? data.direction : 'BEFORE'),
                                                 ((data.number) ? data.number : '25'))
                                             );
+    });
+};
+
+Circuit.prototype.getConversationById = function(convId) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getGetConversationByIdMsg(_self, resolve, reject, convId));
     });
 };
 

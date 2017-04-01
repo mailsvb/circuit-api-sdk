@@ -41,6 +41,15 @@ con.login()
                 console.error(err);
             });
         
+        // get a conversation by Id (conversation ID)
+        con.getConversationById('12345678-90ab-cdef-1234-567890abcdef')
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
         // get user objects from email address (array of user email addresses)
         con.getUsersByMail(["user1@email.com", "user2@email.com"])
             .then(res => {
