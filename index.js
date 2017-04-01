@@ -361,7 +361,7 @@ Circuit.prototype.wsmessage = function(data, flags) {
             }
             if (data.event.type == 'ACTIVITYSTREAM') {
                 if (data.event.activity.type == 'ACTIVITY_CREATED') {
-                    _self.emit('activityStream', data.event.activity.create);
+                    _self.emit('activityStream', data.event.activity.create.item);
                 }
             }
         }
