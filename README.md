@@ -41,8 +41,17 @@ con.login()
                 console.error(err);
             });
         
-        // get userId's from email address (array of user email addresses)
+        // get user objects from email address (array of user email addresses)
         con.getUsersByMail(["user1@email.com", "user2@email.com"])
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
+        // get user objects from user IDs (array of user IDs)
+        con.getUsersByIds(['12345678-90ab-cdef-1234-567890abcdef', '12345678-90ab-cdef-1234-567890abcdef'])
             .then(res => {
                 console.log(res);
             })

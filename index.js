@@ -82,6 +82,14 @@ const getGetUsersByMailMsg = function(_self, resolve, reject, mail) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
+const getGetUsersByIDsMsg = function(_self, resolve, reject, userids) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"GET_USERS_BY_IDS","usersByIds":{"userIds":' + userids + '}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
 const getCreateGroupConvMsg = function(_self, resolve, reject, participants, topic) {
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
@@ -323,6 +331,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             case 'GET_USERS_BY_MAILS':
                                 return resolve(data.response.user.getUsersByMails.users);
                                 break;
+                            case 'GET_USERS_BY_IDS':
+                                return resolve(data.response.user.usersByIds.user);
+                                break;
                             default:
                                 return resolve(data.response.user);
                         }
@@ -464,6 +475,16 @@ Circuit.prototype.getUsersByMail = function(mail) {
             return reject(util.inspect(mail, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of mail addresses');
         }
         _self.ws.send(getGetUsersByMailMsg(_self, resolve, reject, JSON.stringify(mail)));
+    });
+};
+
+Circuit.prototype.getUsersByIds = function(userids) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        if (typeof userids === 'undefined' || !userids instanceof Array || userids.length <= 0) {
+            return reject(util.inspect(userids, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of user ids');
+        }
+        _self.ws.send(getGetUsersByIDsMsg(_self, resolve, reject, JSON.stringify(userids)));
     });
 };
 
