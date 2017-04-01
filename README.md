@@ -18,17 +18,16 @@ con.on('log', console.log);
 con.on('error', console.error);
 
 // listener for itemAdded events
-con.on('itemAdded', (d) => {
-    console.log(d);
-});
+con.on('itemAdded', console.log);
+
 // listener for itemUpdated events
-con.on('itemUpdated', (d) => {
-    console.log(d);
-});
+con.on('itemUpdated', console.log);
+
 // listener for presence events
-con.on('presence', (d) => {
-    console.log(d);
-});
+con.on('presence', console.log);
+
+// listener for activity stream events
+con.on('activityStream', console.log);
 
 // login and do stuff
 con.login()
@@ -98,6 +97,15 @@ con.login()
         
         // disable guest access for a group conversation (conversation ID, 'true' / 'false')
         con.disableGuestAccess('12345678-90ab-cdef-1234-567890abcdef', 'true')
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+            
+        // get items in activity stream of user (number of items)
+        con.getUserActivities('20')
             .then(res => {
                 console.log(res);
             })

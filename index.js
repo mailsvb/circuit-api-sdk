@@ -12,18 +12,18 @@ const entities      = new Entities();
 const user_agent    = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.0000.00';
 
 const getDate = function(date) {
-	var now = date || (new Date());
-	var MM = (now.getMonth() + 1);
-		if (MM < 10) { MM = '0' + MM; }
-	var DD = now.getDate();
-		if (DD < 10) { DD = '0' + DD; }
-	var H = now.getHours();
-		if (H < 10) { H = '0' + H; }
-	var M = now.getMinutes();
-		if (M < 10) { M = '0' + M; }
-	var S = now.getSeconds();
-		if (S < 10) { S = '0' + S; }
-	return DD + "." + MM + "." + now.getFullYear() + " - " + H + ":" + M + ":" + S;
+    var now = date || (new Date());
+    var MM = (now.getMonth() + 1);
+        if (MM < 10) { MM = '0' + MM; }
+    var DD = now.getDate();
+        if (DD < 10) { DD = '0' + DD; }
+    var H = now.getHours();
+        if (H < 10) { H = '0' + H; }
+    var M = now.getMinutes();
+        if (M < 10) { M = '0' + M; }
+    var S = now.getSeconds();
+        if (S < 10) { S = '0' + S; }
+    return DD + "." + MM + "." + now.getFullYear() + " - " + H + ":" + M + ":" + S;
 };
 
 const getLogonMsg = function(_self) {
@@ -111,6 +111,14 @@ const getGrantModeratorConvMsg = function(_self, resolve, reject, convId, userId
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GRANT_MODERATOR_RIGHTS","grantModeratorRights":{"convId":"' + convId + '","userId":' + userIds + '}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
+const getGetActivitiesMsg = function(_self, resolve, reject, number) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"ACTIVITYSTREAM","activityStream":{"type":"GET_ACTIVITIES_BY_USER","getActivitiesByUser":{"timestamp":null,"numberOfItems":' + number + '}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
@@ -319,7 +327,16 @@ Circuit.prototype.wsmessage = function(data, flags) {
                                 return resolve(data.response.user);
                         }
                         break;
-                        
+                    
+                    case 'ACTIVITYSTREAM':
+                        switch (data.response.activityStream.type) {
+                            case 'GET_ACTIVITIES_BY_USER':
+                                return resolve(data.response.activityStream.getActivitiesByUserResult);
+                                break;
+                            default:
+                                return resolve(data.response.activityStream);
+                        }
+                    
                     default:
                         return resolve(data.response);
                 }
@@ -340,6 +357,11 @@ Circuit.prototype.wsmessage = function(data, flags) {
                 }
                 if (data.event.conversation.type == 'UPDATE_ITEM') {
                     _self.emit('itemUpdated', data.event.conversation.updateItem);
+                }
+            }
+            if (data.event.type == 'ACTIVITYSTREAM') {
+                if (data.event.activity.type == 'ACTIVITY_CREATED') {
+                    _self.emit('activityStream', data.event.activity.create);
                 }
             }
         }
@@ -463,6 +485,13 @@ Circuit.prototype.disableGuestAccess = function(convId, disabled) {
     const _self = this;
     return new Promise((resolve, reject) => {
         _self.ws.send(getGuestAccessDisabledMsg(_self, resolve, reject, convId, disabled));
+    });
+};
+
+Circuit.prototype.getUserActivities = function(number) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getGetActivitiesMsg(_self, resolve, reject, number));
     });
 };
 
