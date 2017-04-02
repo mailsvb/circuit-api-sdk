@@ -11,7 +11,10 @@ Usage:
 ```javascript
 const Circuit = require('circuit-api-sdk');
 const fs = require('fs');
-let con = new Circuit({server:'circuitsandbox.net',username:'user@email.com',password:'your-password'});
+// if a valid cookie is given, it will be used to connect to the API. Otherwise a normal login using given credentials
+// login with REGULAR account data
+let con = new Circuit({server:'circuitsandbox.net',username:'user@email.com',password:'your-password',cookie:'connect.sess=XXXX'});
+let con = new Circuit({server:'circuitsandbox.net',client_id:'1234567890abcdef1234567890abcdef',client_secret:'1234567890abcdef1234567890abcdef',cookie:'connect.sess=XXXX'});
 
 // generic listener
 con.on('log', console.log);
@@ -31,7 +34,10 @@ con.on('activityStream', console.log);
 
 // login and do stuff
 con.login()
-    .then(() => {
+    .then(user => {
+        // user object contains information about logged in user, including cookie for reusing
+        console.log(user);
+    
         // get conversations (timestamp ms, BEFORE or AFTER given timestamp, max number of conversations to return)
         con.getConversations(new Date().getTime(), 'BEFORE', '25')
             .then(res => {

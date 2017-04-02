@@ -169,6 +169,9 @@ let Circuit = function(data) {
         this.basicauth = new Buffer(data.client_id + ":" + data.client_secret).toString('base64');
     }
     this.cookie         = null;
+    if (data.cookie) {
+        this.cookie = data.cookie;
+    }
     this.ws             = null;
     this.resolver       = {};
     this.rejecter       = {};
@@ -296,8 +299,8 @@ Circuit.prototype.wsmessage = function(data, flags) {
                 _self.userId = data.response.user.getStuff.user.userId;
                 _self.displayName = data.response.user.getStuff.user.displayName;
             }
-            _self.emit('log', 'Logged in as: ' + data.response.user.getStuff.user.displayName);
-            return _self.resolver['login']();
+            data.response.user.getStuff.user.cookie = _self.cookie;
+            return _self.resolver['login'](data.response.user.getStuff.user);
         }
         if (data.msgType == 'RESPONSE' && _self.resolver.hasOwnProperty(data.response.requestId) && _self.rejecter.hasOwnProperty(data.response.requestId)) {
             let resolve = _self.resolver[data.response.requestId];
@@ -428,11 +431,17 @@ Circuit.prototype.encode = function(msg) {
 
 Circuit.prototype.login = function() {
     const _self = this;
-    _self.emit('log', 'trying to login with given credentials at: ' + _self.server);
     return new Promise((resolve, reject) => {
         _self.resolver['login'] = resolve;
         _self.rejecter['login'] = reject;
-        _self.getCookie();
+        if (_self.cookie == null) {
+            _self.emit('log', 'login with given credentials at: ' + _self.server);
+            _self.getCookie();
+        }
+        else {
+            _self.emit('log', 'connecting to API using given cookie: ' + _self.server);
+            _self.getWS();
+        }
     });
 };
 
