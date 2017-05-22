@@ -87,6 +87,14 @@ const getGetConversationByIdMsg = function(_self, resolve, reject, convid) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
+const getGetMarkedConversationsMsg = function(_self, resolve, reject) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_MARKED_CONVERSATIONS_LIST"}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
 const getGetUsersByMailMsg = function(_self, resolve, reject, mail) {
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
@@ -345,6 +353,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             case 'GET_CONVERSATION_BY_ID':
                                 return resolve(data.response.conversation.getConversationById.conversation);
                                 break;
+                            case 'GET_MARKED_CONVERSATIONS_LIST':
+                                return resolve(data.response.conversation.getMarkedConversationsList);
+                                break;
                             default:
                                 return resolve(data.response.conversation);
                         }
@@ -478,6 +489,13 @@ Circuit.prototype.getConversationById = function(convId) {
     const _self = this;
     return new Promise((resolve, reject) => {
         _self.ws.send(getGetConversationByIdMsg(_self, resolve, reject, convId));
+    });
+};
+
+Circuit.prototype.getMarkedConversations = function() {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.ws.send(getGetMarkedConversationsMsg(_self, resolve, reject));
     });
 };
 
