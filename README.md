@@ -180,6 +180,15 @@ con.login()
                 console.error(err);
             });
         
+        // get all marked conversations (muted and favorites)
+        con.getMarkedConversations()
+        .then(res => {
+            console.log(res);
+        })
+        .catch(err => {
+            console.error(err);
+        });
+        
         // logout from current session
         con.logout();
     })
