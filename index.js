@@ -31,6 +31,11 @@ const getLogonMsg = function(_self) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
+const getLogoutMsg = function(_self) {
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"LOGOUT","logoff":{"invalidate":false}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
 const getStartupMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"VERSION","version":{"type":"GET_VERSION"}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
@@ -156,6 +161,7 @@ const doHttpPost = function(options, data, cb) {
 let Circuit = function(data) {
     const _self         = this;
     this.connected      = false;
+    this.manuallogout   = false;
     this.loginattempts  = 0;
     this.reqID          = 0;
     this.server         = data.server;
@@ -422,10 +428,12 @@ Circuit.prototype.wsclose = function(code, msg) {
     const _self = this;
     _self.emit('error', '(' + code + ') "' + msg + '"');
     clearInterval(_self.pingInterval);
-    if (_self.cookie == '') {
-        _self.getCookie();
-    } else {
-        _self.getWS();
+    if (_self.manuallogout == false) {
+        if (_self.cookie == '') {
+            _self.getCookie();
+        } else {
+            _self.getWS();
+        }
     }
 };
 
@@ -447,6 +455,12 @@ Circuit.prototype.login = function() {
             _self.getWS();
         }
     });
+};
+
+Circuit.prototype.logout = function() {
+    const _self = this;
+    _self.manuallogout = true;
+    _self.ws.send(getLogoutMsg(_self));
 };
 
 Circuit.prototype.getConversations = function(data = {}) {
