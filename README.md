@@ -178,7 +178,10 @@ con.login()
             })
             .catch(err => {
                 console.error(err);
-            });        
+            });
+        
+        // logout from current session
+        con.logout();
     })
     .catch(err => {
         console.error(err);
