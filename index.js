@@ -27,7 +27,7 @@ const getDate = function(date) {
 };
 
 const getLogonMsg = function(_self) {
-    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"LOGON","logon":{"clientDisplayname":"TEST","info":{"deviceType":["WEB"],"manufacturer":"Unify","osVersion":"Win10"}}}}}';
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"LOGON","logon":{"updateLastAccessTime":true,"securityTokenType":["PERSISTENT_SESSION"]}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
@@ -41,12 +41,12 @@ const getDoStuffMsg = function(_self) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
-const getAddTextMsg = function(_self, resolve, reject, convId, parentId, subject, content, attachment) {
+const getAddTextMsg = function(_self, resolve, reject, convId, parentId, subject, content, mentions, attachment) {
     (attachment == '') ? attachment = '[]' : attachment = attachment;
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
-    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":[]' + ((parentId) ? (',"parentId":"' + parentId + '"') : '' ) + '}}}}';
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":' + ((mentions) ? mentions : '[]') + ((parentId) ? (',"parentId":"' + parentId + '"') : '' ) + '}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
@@ -159,10 +159,12 @@ let Circuit = function(data) {
     this.loginattempts  = 0;
     this.reqID          = 0;
     this.server         = data.server;
+    this.persistent     = data.persistent || false;
     if (data.username && data.password) {
         this.credentials = querystring.stringify({
-                                'username' : data.username,
-                                'password' : data.password
+                                'username'  : data.username,
+                                'password'  : data.password,
+                                'persistent': ((data.persistent) ? 'true' : 'false')
                               });
     }
     if (data.client_id && data.client_secret) {
@@ -274,7 +276,7 @@ Circuit.prototype.wsopen = function() {
     _self.connected = true;
     _self.emit('log', 'API connection established.');
     _self.loginattempts = 0;
-    //_self.ws.send(getLogonMsg(_self));
+    _self.ws.send(getLogonMsg(_self));
     _self.ws.send(getStartupMsg(_self));
     _self.ws.send(getDoStuffMsg(_self));
     _self.pingInterval = setInterval(() => {
@@ -299,7 +301,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                 _self.userId = data.response.user.getStuff.user.userId;
                 _self.displayName = data.response.user.getStuff.user.displayName;
             }
-            data.response.user.getStuff.user.cookie = _self.cookie;
+            if (_self.persistent) {
+                data.response.user.getStuff.user.cookie = _self.cookie;
+            }
             return _self.resolver['login'](data.response.user.getStuff.user);
         }
         if (data.msgType == 'RESPONSE' && _self.resolver.hasOwnProperty(data.response.requestId) && _self.rejecter.hasOwnProperty(data.response.requestId)) {
@@ -551,6 +555,7 @@ Circuit.prototype.addText = function(convId, msg) {
                                             ((msg.parentId) ? msg.parentId : false),
                                             ((msg.subject) ? msg.subject : ''),
                                             ((msg.content) ? msg.content : ((typeof msg === 'string') ? msg : '')),
+                                            ((msg.mentions) ? JSON.stringify(msg.mentions) : false),
                                             attachments)
                                         );
         });
