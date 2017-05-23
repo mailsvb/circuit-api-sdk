@@ -10,6 +10,7 @@ const async         = require('async');
 const Entities      = require('html-entities').AllHtmlEntities;
 const entities      = new Entities();
 const user_agent    = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.0000.00';
+const allowed_states= ['AVAILABLE', 'OFFLINE', 'BUSY', 'DND', 'AWAY'];
 
 const getDate = function(date) {
     var now = date || (new Date());
@@ -43,6 +44,11 @@ const getStartupMsg = function(_self) {
 };
 const getDoStuffMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"GET_STUFF","getStuff":{"types":["USER","ACCOUNTS","PRESENCE_STATE"]}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
+const getSetPresenceMsg = function(_self, resolve, reject, state) {
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"SET_PRESENCE","presence":{"state":"' + state + '"}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
@@ -369,6 +375,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             case 'GET_USERS_BY_IDS':
                                 return resolve(data.response.user.usersByIds.user);
                                 break;
+                            case 'SET_PRESENCE':
+                                return resolve(data.response.user.setPresence.state);
+                                break;
                             default:
                                 return resolve(data.response.user);
                         }
@@ -472,6 +481,17 @@ Circuit.prototype.logout = function() {
     const _self = this;
     _self.manuallogout = true;
     _self.ws.send(getLogoutMsg(_self));
+};
+
+Circuit.prototype.setPresence = function(state) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        if (allowed_states.indexOf(state) < 0) {
+            reject('unknown state: ' + state);
+            return;
+        }
+        _self.ws.send(getSetPresenceMsg(_self, resolve, reject, state));
+    });
 };
 
 Circuit.prototype.getConversations = function(data = {}) {
