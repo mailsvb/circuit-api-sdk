@@ -446,9 +446,9 @@ Circuit.prototype.wspong = function(data, flags) {
 
 Circuit.prototype.wsclose = function(code, msg) {
     const _self = this;
-    _self.emit('error', '(' + code + ') "' + msg + '"');
     clearInterval(_self.pingInterval);
     if (_self.manuallogout == false) {
+        _self.emit('error', '(' + code + ') "' + msg + '"');
         if (_self.cookie == '') {
             _self.getCookie();
         } else {
@@ -481,6 +481,12 @@ Circuit.prototype.logout = function() {
     const _self = this;
     _self.manuallogout = true;
     _self.ws.send(getLogoutMsg(_self));
+};
+
+Circuit.prototype.exit = function() {
+    const _self = this;
+    _self.manuallogout = true;
+    _self.ws.close();
 };
 
 Circuit.prototype.setPresence = function(state) {
