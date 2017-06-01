@@ -200,6 +200,9 @@ con.login()
         
         // logout from current session
         con.logout();
+        
+        // exit current session
+        con.exit();
     })
     .catch(err => {
         console.error(err);
