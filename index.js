@@ -302,7 +302,7 @@ Circuit.prototype.wsopen = function() {
     _self.pingInterval = setInterval(() => {
         _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\nPING');
         if (_self.connected) {
-            _self.ws.send('PING');
+            _self.ws.send('PING|' + _self.nextReqID());
         }
     }, 180000);
 };
