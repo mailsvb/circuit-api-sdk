@@ -294,15 +294,15 @@ util.inherits(Circuit, EventEmitter);
 Circuit.prototype.wsopen = function() {
     const _self = this;
     _self.connected = true;
-    _self.emit('log', 'API connection established.');
     _self.loginattempts = 0;
     _self.ws.send(getLogonMsg(_self));
     _self.ws.send(getStartupMsg(_self));
     _self.ws.send(getDoStuffMsg(_self));
     _self.pingInterval = setInterval(() => {
-        _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\nPING');
         if (_self.connected) {
-            _self.ws.send('PING|' + _self.nextReqID());
+            let pingMsg = 'PING|' + _self.nextReqID();
+            _self.emit('log', `>>>>> ${getDate()} >>>>>\n${pingMsg}`);
+            _self.ws.send(pingMsg);
         }
     }, 180000);
 };
