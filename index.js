@@ -312,9 +312,6 @@ Circuit.prototype.wsmessage = function(data, flags) {
     try {
         _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\n' + data.toString());
         data = JSON.parse(data.toString());
-        if (data.msgType == 'RESPONSE' && data.response.type == 'VERSION') {
-            _self.emit('log', 'Backend API version: ' + data.response.version.getVersion.version);
-        }
         if (data.msgType == 'RESPONSE' && data.response.type == 'USER' && data.response.user.type == 'GET_STUFF') {
             if (data.response.user.getStuff.user) {
                 _self.clientId = data.clientId;
