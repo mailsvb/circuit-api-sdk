@@ -410,6 +410,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                 if (data.event.conversation.type == 'UPDATE_ITEM') {
                     _self.emit('itemUpdated', data.event.conversation.updateItem);
                 }
+                if (data.event.conversation.type == 'READ_ITEMS') {
+                    _self.emit('itemRead', data.event.conversation);
+                }
             }
             if (data.event.type == 'ACTIVITYSTREAM') {
                 if (data.event.activity.type == 'ACTIVITY_CREATED') {
