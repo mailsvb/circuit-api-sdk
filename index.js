@@ -413,7 +413,10 @@ Circuit.prototype.wsmessage = function(data, flags) {
             }
             if (data.event.type == 'ACTIVITYSTREAM') {
                 if (data.event.activity.type == 'ACTIVITY_CREATED') {
-                    _self.emit('activityStream', data.event.activity.create.item);
+                    _self.emit('activityCreated', data.event.activity.create.item);
+                }
+                if (data.event.activity.type == 'ACTIVITY_MARKED_READ') {
+                    _self.emit('activityRead', data.event.activity.markRead);
                 }
             }
         }
