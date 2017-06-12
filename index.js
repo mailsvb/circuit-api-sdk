@@ -157,6 +157,15 @@ const getGetActivitiesMsg = function(_self, resolve, reject, number) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
+const getSetVoicemailMsg = function(_self, resolve, reject, enabled, timeout, customGreeting, fileId) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let customGreetingFileId = (fileId) ? ',{"key":"VOICEMAIL_CUSTOMGREETING_URI","dataType":"STRING","stringValue":"' + fileId + '"}' : '';
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"SET_USER_SETTINGS","setUserSettings":{"settings":[{"key":"VOICEMAIL_ENABLED","dataType":"BOOLEAN","booleanValue":' + ((enabled) ? 'true' : 'false') + '},{"key":"VOICEMAIL_TIMEOUT","dataType":"NUMBER","numberValue":' + timeout + '},{"key":"VOICEMAIL_CUSTOMGREETING_ENABLED","dataType":"BOOLEAN","booleanValue":' + ((customGreeting) ? 'true' : 'false') + '}' + customGreetingFileId + ']}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
+    return r;
+};
 
 const doHttpPost = function(options, data, cb) {
     let req = https.request(options, (res) => {
@@ -608,6 +617,20 @@ Circuit.prototype.getUserActivities = function(number) {
     });
 };
 
+Circuit.prototype.setVoicemail = function(config) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        _self.prepareAttachment(((config.attachments) ? config.attachments : ''), (attachments) => {
+            _self.ws.send(getSetVoicemailMsg(_self, resolve, reject,
+                                            ((config.enabled) ? config.enabled : false),
+                                            ((config.timeout) ? config.timeout : '30'),
+                                            ((config.customGreeting) ? config.customGreeting : false),
+                                            ((attachments instanceof Array && attachments.length == 1) ? attachments[0].fileId : false)
+                                        ));
+        });
+    });
+};
+
 Circuit.prototype.addText = function(convId, msg) {
     const _self = this;
     return new Promise((resolve, reject) => {
@@ -617,8 +640,8 @@ Circuit.prototype.addText = function(convId, msg) {
                                             ((msg.subject) ? msg.subject : ''),
                                             ((msg.content) ? msg.content : ((typeof msg === 'string') ? msg : '')),
                                             ((msg.mentions) ? JSON.stringify(msg.mentions) : false),
-                                            attachments)
-                                        );
+                                            JSON.stringify(attachments)
+                                        ));
         });
     });
 };
@@ -682,7 +705,7 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
         if (e) {
             _self.emit('error', e);
         }
-        cb(JSON.stringify(attached));
+        cb(attached);
     });
 }
 
