@@ -23,17 +23,23 @@ let con = new Circuit({server:'circuitsandbox.net',client_id:'1234567890abcdef12
 con.on('log', console.log);
 con.on('error', console.error);
 
-// listener for itemAdded events
+// listener for item added events
 con.on('itemAdded', console.log);
 
-// listener for itemUpdated events
+// listener for item updated events
 con.on('itemUpdated', console.log);
+
+// listener for item read events
+con.on('itemRead', console.log);
 
 // listener for presence events
 con.on('presence', console.log);
 
-// listener for activity stream events
-con.on('activityStream', console.log);
+// listener for activity created events
+con.on('activityCreated', console.log);
+
+// listener for activity read events
+con.on('activityRead', console.log);
 
 // login and do stuff
 con.login()
@@ -191,6 +197,22 @@ con.login()
         
         // set presence state of user (one of 'AVAILABLE', 'OFFLINE', 'BUSY', 'DND', 'AWAY')
         con.setPresence('AVAILABLE')
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
+        // configure your Circuit voicemail with optional attachment for personal greeting(object with enabled, timeout, customGreeting and array of 1 attachment)
+        let config = {
+            enabled: true,
+            timeout: '45',
+            customGreeting: true,
+            attachments =   [
+                                {name: 'recording.wav', data: fs.readFileSync('./recording.wav')}
+                            ];
+        con.setVoicemail(config)
             .then(res => {
                 console.log(res);
             })
