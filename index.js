@@ -409,7 +409,7 @@ Circuit.prototype.wsmessage = function(data, flags) {
         if (data.msgType == 'EVENT') {
             if (data.event.type == 'USER') {
                 if (data.event.user.type == 'USER_PRESENCE_CHANGE') {
-                    _self.emit('presence', data.event.user.presenceChanged.newState);
+                    _self.emit('presence', data.event.user.presenceChanged);
                 }
             }
             if (data.event.type == 'CONVERSATION') {
