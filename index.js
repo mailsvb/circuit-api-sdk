@@ -409,15 +409,15 @@ Circuit.prototype.wsmessage = function(data, flags) {
         if (data.msgType == 'EVENT') {
             if (data.event.type == 'USER') {
                 if (data.event.user.type == 'USER_PRESENCE_CHANGE') {
-                    _self.emit('presence', data.event.user.presenceChanged);
+                    _self.emit('presence', data.event.user.presenceChanged.newState);
                 }
             }
             if (data.event.type == 'CONVERSATION') {
                 if (data.event.conversation.type == 'ADD_ITEM') {
-                    _self.emit('itemAdded', data.event.conversation.addItem);
+                    _self.emit('itemAdded', data.event.conversation.addItem.item);
                 }
                 if (data.event.conversation.type == 'UPDATE_ITEM') {
-                    _self.emit('itemUpdated', data.event.conversation.updateItem);
+                    _self.emit('itemUpdated', data.event.conversation.updateItem.item);
                 }
                 if (data.event.conversation.type == 'READ_ITEMS') {
                     _self.emit('itemRead', data.event.conversation);
