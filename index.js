@@ -53,7 +53,7 @@ const getSetPresenceMsg = function(_self, resolve, reject, state) {
     return r;
 };
 const getAddTextMsg = function(_self, resolve, reject, convId, parentId, subject, content, mentions, attachment) {
-    (attachment == '') ? attachment = '[]' : attachment = attachment;
+    (attachment) ? attachment = attachment : attachment = '[]';
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
@@ -640,7 +640,7 @@ Circuit.prototype.addText = function(convId, msg) {
                                             ((msg.subject) ? msg.subject : ''),
                                             ((msg.content) ? msg.content : ((typeof msg === 'string') ? msg : '')),
                                             ((msg.mentions) ? JSON.stringify(msg.mentions) : false),
-                                            JSON.stringify(attachments)
+                                            ((attachments instanceof Array && attachments.length > 0) ? JSON.stringify(attachments) : false)
                                         ));
         });
     });
