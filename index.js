@@ -29,22 +29,18 @@ const getDate = function(date) {
 
 const getLogonMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"LOGON","logon":{"updateLastAccessTime":true,"securityTokenType":["PERSISTENT_SESSION"]}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getLogoutMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"LOGOUT","logoff":{"invalidate":false}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getStartupMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"VERSION","version":{"type":"GET_VERSION"}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getDoStuffMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"GET_STUFF","getStuff":{"types":["USER","ACCOUNTS","PRESENCE_STATE"]}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getUpdateUserMsg = function(_self, resolve, reject, userId, firstName, lastName) {
@@ -52,7 +48,6 @@ const getUpdateUserMsg = function(_self, resolve, reject, userId, firstName, las
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"UPDATE","update":{"userId":"' + userId + '"' + ((firstName) ? ',"firstName":"' + firstName + '"' : '') + ((lastName) ? ',"lastName":"' + lastName + '"' : '') + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getSetPresenceMsg = function(_self, resolve, reject, state, longitude, latitude, location, status) {
@@ -60,7 +55,6 @@ const getSetPresenceMsg = function(_self, resolve, reject, state, longitude, lat
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"SET_PRESENCE","presence":{"state":"' + state + '","inTransit":false,"mobile":false' + ((longitude) ? ',"longitude":' + longitude : '') + ((latitude) ? ',"latitude":' + latitude : '') + ((location) ? ',"locationText":"' + location + '"' : '') + ((status) ? ',"statusMessage":"' + status + '"' : '') + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getSubscribePresenceMsg = function(_self, resolve, reject, userIds) {
@@ -68,7 +62,6 @@ const getSubscribePresenceMsg = function(_self, resolve, reject, userIds) {
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"SUBSCRIBE_PRESENCE","subscribePresence":{"userIds":' + userIds + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
 const getAddTextMsg = function(_self, resolve, reject, convId, parentId, subject, content, mentions, attachment) {
@@ -77,7 +70,6 @@ const getAddTextMsg = function(_self, resolve, reject, convId, parentId, subject
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_TEXT_ITEM","addTextItem":{"convId":"' + convId + '","contentType":"RICH","subject":"' + subject + '","content":"' + content + '","attachmentMetaData":' + attachment + ',"externalAttachmentMetaData":[],"preview":null,"mentionedUsers":' + ((mentions) ? mentions : '[]') + ((parentId) ? (',"parentId":"' + parentId + '"') : '' ) + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getAddParticipantsMsg = function(_self, resolve, reject, convId, participants) {
@@ -85,7 +77,6 @@ const getAddParticipantsMsg = function(_self, resolve, reject, convId, participa
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"ADD_PARTICIPANT","addParticipant":{"convId":"' + convId + '","locale":"EN_US","userId":' + participants + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getAddRTCParticipantsMsg = function(_self, resolve, reject, RTCsession, participants) {
@@ -93,7 +84,6 @@ const getAddRTCParticipantsMsg = function(_self, resolve, reject, RTCsession, pa
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"RTC_SESSION","rtcSession":{"type":"ADD_PARTICIPANT","addParticipant":{"rtcSessionId":"' + RTCsession + '","userId":"' + participants + '","mediaType":["AUDIO","VIDEO"]}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGetConversationsMsg = function(_self, resolve, reject, date, direction, number) {
@@ -101,7 +91,6 @@ const getGetConversationsMsg = function(_self, resolve, reject, date, direction,
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_CONVERSATIONS","getConversations":{"userId":"' + _self.userId + '","modificationDate":' + date + ',"direction":"' + direction + '","number":' + number + ',"filter":"ALL"}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGetConversationByIdMsg = function(_self, resolve, reject, convid) {
@@ -109,7 +98,6 @@ const getGetConversationByIdMsg = function(_self, resolve, reject, convid) {
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_CONVERSATION_BY_ID","getConversationById":{"convId":"' + convid + '"}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGetMarkedConversationsMsg = function(_self, resolve, reject) {
@@ -117,7 +105,6 @@ const getGetMarkedConversationsMsg = function(_self, resolve, reject) {
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GET_MARKED_CONVERSATIONS_LIST"}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGetUsersByMailMsg = function(_self, resolve, reject, mail) {
@@ -125,7 +112,6 @@ const getGetUsersByMailMsg = function(_self, resolve, reject, mail) {
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"GET_USERS_BY_MAILS","getUsersByMails":{"emailAddresses":' + mail + ',"excludeRoles":["SUPPORT"]}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGetUsersByIDsMsg = function(_self, resolve, reject, userids) {
@@ -133,7 +119,6 @@ const getGetUsersByIDsMsg = function(_self, resolve, reject, userids) {
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"GET_USERS_BY_IDS","usersByIds":{"userIds":' + userids + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getCreateGroupConvMsg = function(_self, resolve, reject, participants, topic) {
@@ -141,7 +126,6 @@ const getCreateGroupConvMsg = function(_self, resolve, reject, participants, top
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"CREATE","create":{"type":"GROUP","topic":"' + topic + '","participants":' + participants + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getModeratorConvMsg = function(_self, resolve, reject, convId) {
@@ -149,7 +133,6 @@ const getModeratorConvMsg = function(_self, resolve, reject, convId) {
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"MODERATE_CONVERSATION","moderateConversation":{"convId":"' + convId + '"}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGuestAccessDisabledMsg = function(_self, resolve, reject, convId, disabled) {
@@ -157,7 +140,6 @@ const getGuestAccessDisabledMsg = function(_self, resolve, reject, convId, disab
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"UPDATE_GUEST_ACCESS","updateGuestAccess":{"convId":"' + convId + '","guestAccessDisabled":' + disabled + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGrantModeratorConvMsg = function(_self, resolve, reject, convId, userIds) {
@@ -165,7 +147,6 @@ const getGrantModeratorConvMsg = function(_self, resolve, reject, convId, userId
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"CONVERSATION","conversation":{"type":"GRANT_MODERATOR_RIGHTS","grantModeratorRights":{"convId":"' + convId + '","userId":' + userIds + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getGetActivitiesMsg = function(_self, resolve, reject, number) {
@@ -173,7 +154,6 @@ const getGetActivitiesMsg = function(_self, resolve, reject, number) {
     _self.resolver[nextId] = resolve;
     _self.rejecter[nextId] = reject;
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"ACTIVITYSTREAM","activityStream":{"type":"GET_ACTIVITIES_BY_USER","getActivitiesByUser":{"timestamp":null,"numberOfItems":' + number + '}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 const getSetVoicemailMsg = function(_self, resolve, reject, enabled, timeout, customGreeting, fileId) {
@@ -182,7 +162,6 @@ const getSetVoicemailMsg = function(_self, resolve, reject, enabled, timeout, cu
     _self.rejecter[nextId] = reject;
     let customGreetingFileId = (fileId) ? ',{"key":"VOICEMAIL_CUSTOMGREETING_URI","dataType":"STRING","stringValue":"' + fileId + '"}' : '';
     let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"SET_USER_SETTINGS","setUserSettings":{"settings":[{"key":"VOICEMAIL_ENABLED","dataType":"BOOLEAN","booleanValue":' + ((enabled) ? 'true' : 'false') + '},{"key":"VOICEMAIL_TIMEOUT","dataType":"NUMBER","numberValue":' + timeout + '},{"key":"VOICEMAIL_CUSTOMGREETING_ENABLED","dataType":"BOOLEAN","booleanValue":' + ((customGreeting) ? 'true' : 'false') + '}' + customGreetingFileId + ']}}}}';
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + r);
     return r;
 };
 
@@ -203,7 +182,9 @@ const doHttpPost = function(options, data, cb) {
 let Circuit = function(data) {
     const _self         = this;
     this.connected      = false;
+    this.reconnecting   = false;
     this.manuallogout   = false;
+    this.pingInterval   = false;
     this.loginattempts  = 0;
     this.reqID          = 0;
     this.server         = data.server;
@@ -323,16 +304,9 @@ Circuit.prototype.wsopen = function() {
     const _self = this;
     _self.connected = true;
     _self.loginattempts = 0;
-    _self.ws.send(getLogonMsg(_self));
-    _self.ws.send(getStartupMsg(_self));
-    _self.ws.send(getDoStuffMsg(_self));
-    _self.pingInterval = setInterval(() => {
-        if (_self.connected) {
-            let pingMsg = 'PING|' + _self.nextReqID();
-            _self.emit('log', `>>>>> ${getDate()} >>>>>\n${pingMsg}`);
-            _self.ws.send(pingMsg);
-        }
-    }, 180000);
+    _self.wssend(getLogonMsg(_self));
+    _self.wssend(getStartupMsg(_self));
+    _self.wssend(getDoStuffMsg(_self));
 };
 
 Circuit.prototype.wsmessage = function(data, flags) {
@@ -349,7 +323,15 @@ Circuit.prototype.wsmessage = function(data, flags) {
             if (_self.persistent) {
                 data.response.user.getStuff.user.cookie = _self.cookie;
             }
-            return _self.resolver['login'](data.response.user.getStuff.user);
+            // on reconnection emit reconnection event
+            if (_self.reconnecting) {
+                _self.reconnecting = false;
+                _self.emit('reconnection');
+            }
+            // only on first connection attempt
+            else {
+                return _self.resolver['login'](data.response.user.getStuff.user);
+            }
         }
         if (data.msgType == 'RESPONSE' && _self.resolver.hasOwnProperty(data.response.requestId) && _self.rejecter.hasOwnProperty(data.response.requestId)) {
             let resolve = _self.resolver[data.response.requestId];
@@ -459,8 +441,22 @@ Circuit.prototype.wsmessage = function(data, flags) {
         }
     }
     catch(e) {
-        _self.emit('error', e);
+        _self.emit('error', util.inspect(e, { showHidden: true, depth: null, breakLength: 'Infinity' }));
     }
+};
+
+Circuit.prototype.wssend = function(msg) {
+    const _self = this;
+    clearInterval(_self.pingInterval);
+    _self.ws.send(msg);
+    _self.pingInterval = setInterval(() => {
+        if (_self.connected) {
+            let pingMsg = 'PING|' + _self.nextReqID();
+            _self.emit('log', `>>>>> ${getDate()} >>>>>\n${pingMsg}`);
+            _self.ws.send(pingMsg);
+        }
+    }, 180000);
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + msg);
 };
 
 Circuit.prototype.wserror = function(error) {
@@ -468,24 +464,25 @@ Circuit.prototype.wserror = function(error) {
     if (error.message.match(/401/)) {
         _self.cookie = '';
     }
-    _self.emit('error', error.message);
+    _self.emit('error', util.inspect(error.message, { showHidden: true, depth: null, breakLength: 'Infinity' }));
 };
 
 Circuit.prototype.wsping = function(data, flags) {
     const _self = this;
-    _self.emit('log', 'websocket ping: ' + data);
+    _self.emit('log', 'websocket ping: ' + util.inspect(data.toString(), { showHidden: true, depth: null, breakLength: 'Infinity' }));
 };
 
 Circuit.prototype.wspong = function(data, flags) {
     const _self = this;
-    _self.emit('log', 'websocket pong: ' + data);
+    _self.emit('log', 'websocket pong: ' + util.inspect(data.toString(), { showHidden: true, depth: null, breakLength: 'Infinity' }));
 };
 
 Circuit.prototype.wsclose = function(code, msg) {
     const _self = this;
     clearInterval(_self.pingInterval);
     if (_self.manuallogout == false) {
-        _self.emit('error', '(' + code + ') "' + msg + '"');
+        _self.reconnecting = true;
+        _self.emit('error', '(' + code + ') ' + util.inspect(msg, { showHidden: true, depth: null, breakLength: 'Infinity' }));
         if (_self.cookie == '') {
             _self.getCookie();
         } else {
@@ -517,7 +514,7 @@ Circuit.prototype.login = function() {
 Circuit.prototype.logout = function() {
     const _self = this;
     _self.manuallogout = true;
-    _self.ws.send(getLogoutMsg(_self));
+    _self.wssend(getLogoutMsg(_self));
 };
 
 Circuit.prototype.exit = function() {
@@ -533,7 +530,7 @@ Circuit.prototype.updateUser = function(user) {
             reject('missing uderId');
             return;
         }
-        _self.ws.send(getUpdateUserMsg(_self, resolve, reject, 
+        _self.wssend(getUpdateUserMsg(_self, resolve, reject, 
                                                 user.userId,
                                                 ((user.firstName) ? user.firstName : false),
                                                 ((user.lastName) ? user.lastName : false)
@@ -551,7 +548,7 @@ Circuit.prototype.setPresence = function(presence) {
             reject('unknown state:' + presence.state);
             return;
         }
-        _self.ws.send(getSetPresenceMsg(_self, resolve, reject, 
+        _self.wssend(getSetPresenceMsg(_self, resolve, reject, 
                                                 presence.state,
                                                 ((presence.longitude) ? presence.longitude : false),
                                                 ((presence.latitude) ? presence.latitude : false),
@@ -568,14 +565,14 @@ Circuit.prototype.subscribePresence = function(userIds) {
             reject('not an array:' + userIds);
             return;
         }
-        _self.ws.send(getSubscribePresenceMsg(_self, resolve, reject, JSON.stringify(userIds)));
+        _self.wssend(getSubscribePresenceMsg(_self, resolve, reject, JSON.stringify(userIds)));
     });
 };
 
 Circuit.prototype.getConversations = function(data = {}) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getGetConversationsMsg(_self, resolve, reject, 
+        _self.wssend(getGetConversationsMsg(_self, resolve, reject, 
                                                 ((data.date) ? data.date : new Date().getTime()),
                                                 ((data.direction) ? data.direction : 'BEFORE'),
                                                 ((data.number) ? data.number : '25'))
@@ -586,28 +583,28 @@ Circuit.prototype.getConversations = function(data = {}) {
 Circuit.prototype.getConversationById = function(convId) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getGetConversationByIdMsg(_self, resolve, reject, convId));
+        _self.wssend(getGetConversationByIdMsg(_self, resolve, reject, convId));
     });
 };
 
 Circuit.prototype.getMarkedConversations = function() {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getGetMarkedConversationsMsg(_self, resolve, reject));
+        _self.wssend(getGetMarkedConversationsMsg(_self, resolve, reject));
     });
 };
 
 Circuit.prototype.moderation = function(convId) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getModeratorConvMsg(_self, resolve, reject, convId));
+        _self.wssend(getModeratorConvMsg(_self, resolve, reject, convId));
     });
 };
 
 Circuit.prototype.setModerators = function(convId, userIds) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getGrantModeratorConvMsg(_self, resolve, reject, convId, JSON.stringify(userIds)));
+        _self.wssend(getGrantModeratorConvMsg(_self, resolve, reject, convId, JSON.stringify(userIds)));
     });
 };
 
@@ -625,7 +622,7 @@ Circuit.prototype.createGroupConv = function(participants, topic) {
             userIds.push({userId:id});
         });
         userIds.push({userId:_self.userId});
-        _self.ws.send(getCreateGroupConvMsg(_self, resolve, reject, JSON.stringify(userIds), topic));
+        _self.wssend(getCreateGroupConvMsg(_self, resolve, reject, JSON.stringify(userIds), topic));
     });
 };
 
@@ -635,7 +632,7 @@ Circuit.prototype.getUsersByMail = function(mail) {
         if (typeof mail === 'undefined' || !mail instanceof Array || mail.length <= 0) {
             return reject(util.inspect(mail, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of mail addresses');
         }
-        _self.ws.send(getGetUsersByMailMsg(_self, resolve, reject, JSON.stringify(mail)));
+        _self.wssend(getGetUsersByMailMsg(_self, resolve, reject, JSON.stringify(mail)));
     });
 };
 
@@ -645,35 +642,35 @@ Circuit.prototype.getUsersByIds = function(userids) {
         if (typeof userids === 'undefined' || !userids instanceof Array || userids.length <= 0) {
             return reject(util.inspect(userids, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of user ids');
         }
-        _self.ws.send(getGetUsersByIDsMsg(_self, resolve, reject, JSON.stringify(userids)));
+        _self.wssend(getGetUsersByIDsMsg(_self, resolve, reject, JSON.stringify(userids)));
     });
 };
 
 Circuit.prototype.addParticipants = function(convId, participants) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getAddParticipantsMsg(_self, resolve, reject, convId, participants));
+        _self.wssend(getAddParticipantsMsg(_self, resolve, reject, convId, participants));
     });
 };
 
 Circuit.prototype.addRTCParticipants = function(RTCsession, participants) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getAddRTCParticipantsMsg(_self, resolve, reject, RTCsession, participants));
+        _self.wssend(getAddRTCParticipantsMsg(_self, resolve, reject, RTCsession, participants));
     });
 };
 
 Circuit.prototype.disableGuestAccess = function(convId, disabled) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getGuestAccessDisabledMsg(_self, resolve, reject, convId, disabled));
+        _self.wssend(getGuestAccessDisabledMsg(_self, resolve, reject, convId, disabled));
     });
 };
 
 Circuit.prototype.getUserActivities = function(number) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.ws.send(getGetActivitiesMsg(_self, resolve, reject, number));
+        _self.wssend(getGetActivitiesMsg(_self, resolve, reject, number));
     });
 };
 
@@ -681,7 +678,7 @@ Circuit.prototype.setVoicemail = function(config) {
     const _self = this;
     return new Promise((resolve, reject) => {
         _self.prepareAttachment(((config.attachments) ? config.attachments : ''), (attachments) => {
-            _self.ws.send(getSetVoicemailMsg(_self, resolve, reject,
+            _self.wssend(getSetVoicemailMsg(_self, resolve, reject,
                                             ((config.enabled) ? config.enabled : false),
                                             ((config.timeout) ? config.timeout : '30'),
                                             ((config.customGreeting) ? config.customGreeting : false),
@@ -695,7 +692,7 @@ Circuit.prototype.addText = function(convId, msg) {
     const _self = this;
     return new Promise((resolve, reject) => {
         _self.prepareAttachment(((msg.attachments) ? msg.attachments : ''), (attachments) => {
-            _self.ws.send(getAddTextMsg(_self, resolve, reject, convId,
+            _self.wssend(getAddTextMsg(_self, resolve, reject, convId,
                                             ((msg.parentId) ? msg.parentId : false),
                                             ((msg.subject) ? msg.subject : ''),
                                             ((msg.content) ? msg.content : ((typeof msg === 'string') ? msg : '')),
@@ -756,14 +753,14 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
                 next();
             }
             catch(e) {
-                _self.emit('error', e);
+                _self.emit('error', util.inspect(e, { showHidden: true, depth: null, breakLength: 'Infinity' }));
                 next();
             }
         });
     },
     function(e) {
         if (e) {
-            _self.emit('error', e);
+            _self.emit('error', util.inspect(e, { showHidden: true, depth: null, breakLength: 'Infinity' }));
         }
         cb(attached);
     });
