@@ -9,7 +9,7 @@ const uuid          = require('uuid/v1');
 const async         = require('async');
 const Entities      = require('html-entities').AllHtmlEntities;
 const entities      = new Entities();
-const user_agent    = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.0000.00';
+const user_agent    = 'Mozilla/5.0 (Linux; 1.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome apisdk/1.0';
 const allowed_states= ['AVAILABLE', 'OFFLINE', 'BUSY', 'DND', 'AWAY'];
 
 const getDate = function(date) {
@@ -185,6 +185,7 @@ let Circuit = function(data) {
     this.reconnecting   = false;
     this.manuallogout   = false;
     this.pingInterval   = false;
+    this.wspingInterval = false;
     this.loginattempts  = 0;
     this.reqID          = 0;
     this.server         = data.server;
@@ -287,7 +288,7 @@ let Circuit = function(data) {
     };
     
     this.getWS = () => {
-        _self.emit('log', 'trying to connect to API');
+        _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\ntrying to connect to API');
         let wsOptions = {headers: {Cookie: _self.cookie,'User-Agent': user_agent}, rejectUnauthorized: false};
         _self.ws = new NodeWebSocket('wss://' + _self.server + '/api', wsOptions);
         _self.ws.on('open', () => _self.wsopen());
@@ -304,9 +305,12 @@ Circuit.prototype.wsopen = function() {
     const _self = this;
     _self.connected = true;
     _self.loginattempts = 0;
-    _self.wssend(getLogonMsg(_self));
-    _self.wssend(getStartupMsg(_self));
-    _self.wssend(getDoStuffMsg(_self));
+    _self.prepwssend(getLogonMsg(_self));
+    _self.prepwssend(getStartupMsg(_self));
+    _self.prepwssend(getDoStuffMsg(_self));
+    _self.wspingInterval = setInterval(() => {
+        _self.ws.ping('', false, false);
+    }, 5000);
 };
 
 Circuit.prototype.wsmessage = function(data, flags) {
@@ -445,17 +449,21 @@ Circuit.prototype.wsmessage = function(data, flags) {
     }
 };
 
-Circuit.prototype.wssend = function(msg) {
+Circuit.prototype.prepwssend = function(msg) {
     const _self = this;
     clearInterval(_self.pingInterval);
-    _self.ws.send(msg);
+    _self.wssend(msg);
     _self.pingInterval = setInterval(() => {
         if (_self.connected) {
             let pingMsg = 'PING|' + _self.nextReqID();
-            _self.emit('log', `>>>>> ${getDate()} >>>>>\n${pingMsg}`);
-            _self.ws.send(pingMsg);
+            _self.wssend(pingMsg);
         }
     }, 180000);
+};
+
+Circuit.prototype.wssend = function(msg) {
+    const _self = this;
+    _self.ws.send(msg);
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + msg);
 };
 
@@ -464,30 +472,34 @@ Circuit.prototype.wserror = function(error) {
     if (error.message.match(/401/)) {
         _self.cookie = '';
     }
-    _self.emit('error', util.inspect(error.message, { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('error', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(error.message, { showHidden: true, depth: null, breakLength: 'Infinity' }));
 };
 
 Circuit.prototype.wsping = function(data, flags) {
     const _self = this;
-    _self.emit('log', 'websocket ping: ' + util.inspect(data.toString(), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\nON_PING');
+    _self.ws.pong('', false, false);
 };
 
 Circuit.prototype.wspong = function(data, flags) {
     const _self = this;
-    _self.emit('log', 'websocket pong: ' + util.inspect(data.toString(), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\nON_PONG');
 };
 
 Circuit.prototype.wsclose = function(code, msg) {
     const _self = this;
     clearInterval(_self.pingInterval);
+    clearInterval(_self.wspingInterval);
     if (_self.manuallogout == false) {
         _self.reconnecting = true;
-        _self.emit('error', '(' + code + ') ' + util.inspect(msg, { showHidden: true, depth: null, breakLength: 'Infinity' }));
-        if (_self.cookie == '') {
-            _self.getCookie();
-        } else {
-            _self.getWS();
-        }
+        _self.emit('error', '>>>>> ' + getDate() + ' >>>>>\n' + code);
+        setTimeout(() => {
+            if (_self.cookie == '') {
+                _self.getCookie();
+            } else {
+                _self.getWS();
+            }
+        }, 5000);
     }
 };
 
@@ -501,11 +513,11 @@ Circuit.prototype.login = function() {
         _self.resolver['login'] = resolve;
         _self.rejecter['login'] = reject;
         if (_self.cookie == null) {
-            _self.emit('log', 'login with given credentials at: ' + _self.server);
+            _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\nlogin with given credentials at: ' + _self.server);
             _self.getCookie();
         }
         else {
-            _self.emit('log', 'connecting to API using given cookie: ' + _self.server);
+            _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\nconnecting to API using given cookie: ' + _self.server);
             _self.getWS();
         }
     });
@@ -514,13 +526,13 @@ Circuit.prototype.login = function() {
 Circuit.prototype.logout = function() {
     const _self = this;
     _self.manuallogout = true;
-    _self.wssend(getLogoutMsg(_self));
+    _self.prepwssend(getLogoutMsg(_self));
 };
 
 Circuit.prototype.exit = function() {
     const _self = this;
     _self.manuallogout = true;
-    _self.ws.close();
+    _self.ws.terminate();
 };
 
 Circuit.prototype.updateUser = function(user) {
@@ -530,7 +542,7 @@ Circuit.prototype.updateUser = function(user) {
             reject('missing uderId');
             return;
         }
-        _self.wssend(getUpdateUserMsg(_self, resolve, reject, 
+        _self.prepwssend(getUpdateUserMsg(_self, resolve, reject, 
                                                 user.userId,
                                                 ((user.firstName) ? user.firstName : false),
                                                 ((user.lastName) ? user.lastName : false)
@@ -548,7 +560,7 @@ Circuit.prototype.setPresence = function(presence) {
             reject('unknown state:' + presence.state);
             return;
         }
-        _self.wssend(getSetPresenceMsg(_self, resolve, reject, 
+        _self.prepwssend(getSetPresenceMsg(_self, resolve, reject, 
                                                 presence.state,
                                                 ((presence.longitude) ? presence.longitude : false),
                                                 ((presence.latitude) ? presence.latitude : false),
@@ -565,14 +577,14 @@ Circuit.prototype.subscribePresence = function(userIds) {
             reject('not an array:' + userIds);
             return;
         }
-        _self.wssend(getSubscribePresenceMsg(_self, resolve, reject, JSON.stringify(userIds)));
+        _self.prepwssend(getSubscribePresenceMsg(_self, resolve, reject, JSON.stringify(userIds)));
     });
 };
 
 Circuit.prototype.getConversations = function(data = {}) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getGetConversationsMsg(_self, resolve, reject, 
+        _self.prepwssend(getGetConversationsMsg(_self, resolve, reject, 
                                                 ((data.date) ? data.date : new Date().getTime()),
                                                 ((data.direction) ? data.direction : 'BEFORE'),
                                                 ((data.number) ? data.number : '25'))
@@ -583,28 +595,28 @@ Circuit.prototype.getConversations = function(data = {}) {
 Circuit.prototype.getConversationById = function(convId) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getGetConversationByIdMsg(_self, resolve, reject, convId));
+        _self.prepwssend(getGetConversationByIdMsg(_self, resolve, reject, convId));
     });
 };
 
 Circuit.prototype.getMarkedConversations = function() {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getGetMarkedConversationsMsg(_self, resolve, reject));
+        _self.prepwssend(getGetMarkedConversationsMsg(_self, resolve, reject));
     });
 };
 
 Circuit.prototype.moderation = function(convId) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getModeratorConvMsg(_self, resolve, reject, convId));
+        _self.prepwssend(getModeratorConvMsg(_self, resolve, reject, convId));
     });
 };
 
 Circuit.prototype.setModerators = function(convId, userIds) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getGrantModeratorConvMsg(_self, resolve, reject, convId, JSON.stringify(userIds)));
+        _self.prepwssend(getGrantModeratorConvMsg(_self, resolve, reject, convId, JSON.stringify(userIds)));
     });
 };
 
@@ -622,7 +634,7 @@ Circuit.prototype.createGroupConv = function(participants, topic) {
             userIds.push({userId:id});
         });
         userIds.push({userId:_self.userId});
-        _self.wssend(getCreateGroupConvMsg(_self, resolve, reject, JSON.stringify(userIds), topic));
+        _self.prepwssend(getCreateGroupConvMsg(_self, resolve, reject, JSON.stringify(userIds), topic));
     });
 };
 
@@ -632,7 +644,7 @@ Circuit.prototype.getUsersByMail = function(mail) {
         if (typeof mail === 'undefined' || !mail instanceof Array || mail.length <= 0) {
             return reject(util.inspect(mail, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of mail addresses');
         }
-        _self.wssend(getGetUsersByMailMsg(_self, resolve, reject, JSON.stringify(mail)));
+        _self.prepwssend(getGetUsersByMailMsg(_self, resolve, reject, JSON.stringify(mail)));
     });
 };
 
@@ -642,35 +654,35 @@ Circuit.prototype.getUsersByIds = function(userids) {
         if (typeof userids === 'undefined' || !userids instanceof Array || userids.length <= 0) {
             return reject(util.inspect(userids, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of user ids');
         }
-        _self.wssend(getGetUsersByIDsMsg(_self, resolve, reject, JSON.stringify(userids)));
+        _self.prepwssend(getGetUsersByIDsMsg(_self, resolve, reject, JSON.stringify(userids)));
     });
 };
 
 Circuit.prototype.addParticipants = function(convId, participants) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getAddParticipantsMsg(_self, resolve, reject, convId, participants));
+        _self.prepwssend(getAddParticipantsMsg(_self, resolve, reject, convId, participants));
     });
 };
 
 Circuit.prototype.addRTCParticipants = function(RTCsession, participants) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getAddRTCParticipantsMsg(_self, resolve, reject, RTCsession, participants));
+        _self.prepwssend(getAddRTCParticipantsMsg(_self, resolve, reject, RTCsession, participants));
     });
 };
 
 Circuit.prototype.disableGuestAccess = function(convId, disabled) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getGuestAccessDisabledMsg(_self, resolve, reject, convId, disabled));
+        _self.prepwssend(getGuestAccessDisabledMsg(_self, resolve, reject, convId, disabled));
     });
 };
 
 Circuit.prototype.getUserActivities = function(number) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        _self.wssend(getGetActivitiesMsg(_self, resolve, reject, number));
+        _self.prepwssend(getGetActivitiesMsg(_self, resolve, reject, number));
     });
 };
 
@@ -678,7 +690,7 @@ Circuit.prototype.setVoicemail = function(config) {
     const _self = this;
     return new Promise((resolve, reject) => {
         _self.prepareAttachment(((config.attachments) ? config.attachments : ''), (attachments) => {
-            _self.wssend(getSetVoicemailMsg(_self, resolve, reject,
+            _self.prepwssend(getSetVoicemailMsg(_self, resolve, reject,
                                             ((config.enabled) ? config.enabled : false),
                                             ((config.timeout) ? config.timeout : '30'),
                                             ((config.customGreeting) ? config.customGreeting : false),
@@ -692,7 +704,7 @@ Circuit.prototype.addText = function(convId, msg) {
     const _self = this;
     return new Promise((resolve, reject) => {
         _self.prepareAttachment(((msg.attachments) ? msg.attachments : ''), (attachments) => {
-            _self.wssend(getAddTextMsg(_self, resolve, reject, convId,
+            _self.prepwssend(getAddTextMsg(_self, resolve, reject, convId,
                                             ((msg.parentId) ? msg.parentId : false),
                                             ((msg.subject) ? msg.subject : ''),
                                             ((msg.content) ? msg.content : ((typeof msg === 'string') ? msg : '')),
