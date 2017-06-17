@@ -2,10 +2,7 @@ const util          = require('util');
 const EventEmitter  = require('events').EventEmitter;
 const NodeWebSocket = require('ws');
 const https         = require('https');
-const fs            = require('fs');
-const url           = require('url');
 const querystring   = require('querystring');
-const uuid          = require('uuid/v1');
 const async         = require('async');
 const Entities      = require('html-entities').AllHtmlEntities;
 const entities      = new Entities();
@@ -408,6 +405,7 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             default:
                                 return resolve(data.response.activityStream);
                         }
+                        break;
                     
                     default:
                         return resolve(data.response);
@@ -490,11 +488,11 @@ Circuit.prototype.wsclose = function(code, msg) {
     const _self = this;
     clearInterval(_self.pingInterval);
     clearInterval(_self.wspingInterval);
-    if (_self.manuallogout == false) {
+    if (_self.manuallogout === false) {
         _self.reconnecting = true;
         _self.emit('error', '>>>>> ' + getDate() + ' >>>>>\n' + code);
         setTimeout(() => {
-            if (_self.cookie == '') {
+            if (_self.cookie === '') {
                 _self.getCookie();
             } else {
                 _self.getWS();
@@ -512,7 +510,7 @@ Circuit.prototype.login = function() {
     return new Promise((resolve, reject) => {
         _self.resolver['login'] = resolve;
         _self.rejecter['login'] = reject;
-        if (_self.cookie == null) {
+        if (_self.cookie === null) {
             _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\nlogin with given credentials at: ' + _self.server);
             _self.getCookie();
         }
@@ -538,7 +536,7 @@ Circuit.prototype.exit = function() {
 Circuit.prototype.updateUser = function(user) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        if (! user instanceof Object && user.userId) {
+        if (!(user instanceof Object) && user.userId) {
             reject('missing uderId');
             return;
         }
@@ -553,7 +551,7 @@ Circuit.prototype.updateUser = function(user) {
 Circuit.prototype.setPresence = function(presence) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        if (!presence instanceof Object) {
+        if (!(presence instanceof Object)) {
             presence = {state: presence};
         }
         if (presence.state && allowed_states.indexOf(presence.state) < 0) {
@@ -573,7 +571,7 @@ Circuit.prototype.setPresence = function(presence) {
 Circuit.prototype.subscribePresence = function(userIds) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        if (!userIds instanceof Array) {
+        if (!(userIds instanceof Array)) {
             reject('not an array:' + userIds);
             return;
         }
@@ -623,10 +621,10 @@ Circuit.prototype.setModerators = function(convId, userIds) {
 Circuit.prototype.createGroupConv = function(participants, topic) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        if (typeof participants === 'undefined' || !participants instanceof Array || participants.length <= 0) {
+        if (typeof participants === 'undefined' || !(participants instanceof Array) || participants.length <= 0) {
             return reject(util.inspect(participants, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of user IDs');
         }
-        if (typeof topic === 'undefined' || !topic instanceof String) {
+        if (typeof topic === 'undefined' || !(topic instanceof String)) {
             topic = '';
         }
         let userIds = [];
@@ -641,7 +639,7 @@ Circuit.prototype.createGroupConv = function(participants, topic) {
 Circuit.prototype.getUsersByMail = function(mail) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        if (typeof mail === 'undefined' || !mail instanceof Array || mail.length <= 0) {
+        if (typeof mail === 'undefined' || !(mail instanceof Array) || mail.length <= 0) {
             return reject(util.inspect(mail, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of mail addresses');
         }
         _self.prepwssend(getGetUsersByMailMsg(_self, resolve, reject, JSON.stringify(mail)));
@@ -651,7 +649,7 @@ Circuit.prototype.getUsersByMail = function(mail) {
 Circuit.prototype.getUsersByIds = function(userids) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        if (typeof userids === 'undefined' || !userids instanceof Array || userids.length <= 0) {
+        if (typeof userids === 'undefined' || !(userids instanceof Array) || userids.length <= 0) {
             return reject(util.inspect(userids, { showHidden: true, depth: null, breakLength: 'Infinity' }) + ' is not a valid array of user ids');
         }
         _self.prepwssend(getGetUsersByIDsMsg(_self, resolve, reject, JSON.stringify(userids)));
@@ -719,7 +717,7 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
     const _self = this;
     let attached = [];
     let allFileIds = [];
-    if (typeof attachments === 'undefined' || !attachments instanceof Array || attachments.length <= 0) {
+    if (typeof attachments === 'undefined' || !(attachments instanceof Array) || attachments.length <= 0) {
         cb('');
         return;
     }
@@ -728,7 +726,7 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
             hostname: _self.server,
             port: 443,
             // itemid is the same for all requests belonging to 1 conversation entry
-            path: '/fileapi?itemid=' + ((attached.length == 0) ? 'NULL' : attached[0].itemId),
+            path: '/fileapi?itemid=' + ((attached.length === 0) ? 'NULL' : attached[0].itemId),
             method: 'POST',
             rejectUnauthorized: false,
             headers: {
@@ -742,14 +740,14 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
         };
         _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(options, { showHidden: true, depth: null, breakLength: 'Infinity' }));
         doHttpPost(options, attachment.data, (headers, data, error) => {
-            if (!data instanceof Array && !data.length == 1) {
+            if (!(data instanceof Array) && data.length != 1) {
                 next();
             }
             try {
                 _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\n' + data.toString());
                 let d = JSON.parse(data.toString())[0];
                 // check from response, which fileid is the new one
-                for (j=0; j < d.fileid.length; j++) {
+                for (var j=0; j < d.fileid.length; j++) {
                     if (allFileIds.indexOf(d.fileid[j]) < 0) {
                         allFileIds.push(d.fileid[j]);
                         break;
@@ -776,6 +774,6 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
         }
         cb(attached);
     });
-}
+};
 
 module.exports = Circuit;
