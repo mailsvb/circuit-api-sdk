@@ -48,7 +48,10 @@ const getDoStuffMsg = function(_self) {
     return r;
 };
 const getSetPresenceMsg = function(_self, resolve, reject, state, longitude, latitude, location, status) {
-    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"SET_PRESENCE","presence":{"state":"' + state + '","inTransit":false,"mobile":false' + ((longitude) ? ',"longitude":' + longitude : '') + ((latitude) ? ',"latitude":' + latitude : '') + ((location) ? ',"locationText":"' + location + '"' : '') + ((status) ? ',"statusMessage":"' + status + '"' : '') + '}}}}';
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"SET_PRESENCE","presence":{"state":"' + state + '","inTransit":false,"mobile":false' + ((longitude) ? ',"longitude":' + longitude : '') + ((latitude) ? ',"latitude":' + latitude : '') + ((location) ? ',"locationText":"' + location + '"' : '') + ((status) ? ',"statusMessage":"' + status + '"' : '') + '}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
