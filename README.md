@@ -195,8 +195,8 @@ con.login()
                 console.error(err);
             });
         
-        // set presence state of user (one of 'AVAILABLE', 'OFFLINE', 'BUSY', 'DND', 'AWAY')
-        con.setPresence('AVAILABLE')
+        // set presence state of user (state one of 'AVAILABLE', 'OFFLINE', 'BUSY', 'DND', 'AWAY')
+        con.setPresence({state:'AVAILABLE',longitude:'10.00',latitude:'50.00',location:'Berlin, Deutschland',status:'My Status'})
             .then(res => {
                 console.log(res);
             })
