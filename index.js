@@ -168,6 +168,7 @@ let Circuit = function(data) {
     this.manuallogout   = false;
     this.pingInterval   = false;
     this.wspingInterval = false;
+    this.lastpong       = 0;
     this.loginattempts  = 0;
     this.reqID          = 0;
     this.server         = data.server;
@@ -287,11 +288,18 @@ Circuit.prototype.wsopen = function() {
     const _self = this;
     _self.connected = true;
     _self.loginattempts = 0;
+    _self.lastpong = parseInt(new Date().getTime());
     _self.prepwssend(getLogonMsg(_self));
     _self.prepwssend(getStartupMsg(_self));
     _self.prepwssend(getDoStuffMsg(_self));
     _self.wspingInterval = setInterval(() => {
-        _self.ws.ping('', false, false);
+        if ((parseInt(new Date().getTime()) - _self.lastpong) > 30000) {
+            _self.emit('error', '<<<<< PING ERROR');
+            _self.ws.close();
+        }
+        else {
+            _self.ws.ping('', false, false);
+        }
     }, 5000);
 };
 
@@ -466,7 +474,7 @@ Circuit.prototype.wsping = function(data, flags) {
 
 Circuit.prototype.wspong = function(data, flags) {
     const _self = this;
-    _self.emit('log', '<<<<< ON_PONG');
+    _self.lastpong = parseInt(new Date().getTime());
 };
 
 Circuit.prototype.wsclose = function(code, msg) {
