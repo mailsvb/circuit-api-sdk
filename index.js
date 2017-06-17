@@ -47,6 +47,14 @@ const getDoStuffMsg = function(_self) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
+const getUpdateUserMsg = function(_self, resolve, reject, userId, firstName, lastName) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"UPDATE","update":{"userId":"' + userId + '"' + ((firstName) ? ',"firstName":"' + firstName + '"' : '') + ((lastName) ? ',"lastName":"' + lastName + '"' : '') + '}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
 const getSetPresenceMsg = function(_self, resolve, reject, state, longitude, latitude, location, status) {
     let nextId = _self.nextReqID();
     _self.resolver[nextId] = resolve;
@@ -387,6 +395,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             case 'SET_PRESENCE':
                                 return resolve(data.response.user.setPresence.state);
                                 break;
+                            case 'UPDATE':
+                                return resolve(data.response.user.updateResult.user);
+                                break;
                             default:
                                 return resolve(data.response.user);
                         }
@@ -504,6 +515,21 @@ Circuit.prototype.exit = function() {
     _self.ws.close();
 };
 
+Circuit.prototype.updateUser = function(user) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        if (! user instanceof Object && user.userId) {
+            reject('missing uderId');
+            return;
+        }
+        _self.ws.send(getUpdateUserMsg(_self, resolve, reject, 
+                                                user.userId,
+                                                ((user.firstName) ? user.firstName : false),
+                                                ((user.lastName) ? user.lastName : false)
+                                                ));
+    });
+};
+
 Circuit.prototype.setPresence = function(presence) {
     const _self = this;
     return new Promise((resolve, reject) => {
@@ -511,7 +537,7 @@ Circuit.prototype.setPresence = function(presence) {
             presence = {state: presence};
         }
         if (presence.state && allowed_states.indexOf(presence.state) < 0) {
-            reject('unknown state:' + state);
+            reject('unknown state:' + presence.state);
             return;
         }
         _self.ws.send(getSetPresenceMsg(_self, resolve, reject, 
