@@ -47,8 +47,8 @@ const getDoStuffMsg = function(_self) {
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
-const getSetPresenceMsg = function(_self, resolve, reject, state) {
-    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"SET_PRESENCE","presence":{"state":"' + state + '"}}}}';
+const getSetPresenceMsg = function(_self, resolve, reject, state, longitude, latitude, location, status) {
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"SET_PRESENCE","presence":{"state":"' + state + '","inTransit":false,"mobile":false' + ((longitude) ? ',"longitude":' + longitude : '') + ((latitude) ? ',"latitude":' + latitude : '') + ((location) ? ',"locationText":"' + location + '"' : '') + ((status) ? ',"statusMessage":"' + status + '"' : '') + '}}}}';
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
@@ -501,14 +501,23 @@ Circuit.prototype.exit = function() {
     _self.ws.close();
 };
 
-Circuit.prototype.setPresence = function(state) {
+Circuit.prototype.setPresence = function(presence) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        if (allowed_states.indexOf(state) < 0) {
-            reject('unknown state: ' + state);
+        if (!presence instanceof Object) {
+            presence = {state: presence};
+        }
+        if (presence.state && allowed_states.indexOf(presence.state) < 0) {
+            reject('unknown state:' + state);
             return;
         }
-        _self.ws.send(getSetPresenceMsg(_self, resolve, reject, state));
+        _self.ws.send(getSetPresenceMsg(_self, resolve, reject, 
+                                                presence.state,
+                                                ((presence.longitude) ? presence.longitude : false),
+                                                ((presence.latitude) ? presence.latitude : false),
+                                                ((presence.location) ? presence.location : false),
+                                                ((presence.status) ? presence.status : false)
+                                                ));
     });
 };
 
