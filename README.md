@@ -204,6 +204,15 @@ con.login()
                 console.error(err);
             });
         
+        // update User
+        con.updateUser({userId:'12345678-90ab-cdef-1234-567890abcdef',firstName:'John',lastName:'Doe'})
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
         // configure your Circuit voicemail with optional attachment for personal greeting(object with enabled, timeout, customGreeting and array of 1 attachment)
         let config = {
             enabled: true,
