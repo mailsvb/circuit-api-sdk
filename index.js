@@ -63,6 +63,14 @@ const getSetPresenceMsg = function(_self, resolve, reject, state, longitude, lat
     _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
     return r;
 };
+const getSubscribePresenceMsg = function(_self, resolve, reject, userIds) {
+    let nextId = _self.nextReqID();
+    _self.resolver[nextId] = resolve;
+    _self.rejecter[nextId] = reject;
+    let r = '{"msgType":"REQUEST","request":{"requestId":' + nextId + ',"type":"USER","user":{"type":"SUBSCRIBE_PRESENCE","subscribePresence":{"userIds":' + userIds + '}}}}';
+    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(JSON.parse(r), { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    return r;
+};
 const getAddTextMsg = function(_self, resolve, reject, convId, parentId, subject, content, mentions, attachment) {
     (attachment) ? attachment = attachment : attachment = '[]';
     let nextId = _self.nextReqID();
@@ -395,6 +403,9 @@ Circuit.prototype.wsmessage = function(data, flags) {
                             case 'SET_PRESENCE':
                                 return resolve(data.response.user.setPresence.state);
                                 break;
+                            case 'SUBSCRIBE_PRESENCE':
+                                return resolve(data.response.user.subscribePresence.states);
+                                break;
                             case 'UPDATE':
                                 return resolve(data.response.user.updateResult.user);
                                 break;
@@ -547,6 +558,17 @@ Circuit.prototype.setPresence = function(presence) {
                                                 ((presence.location) ? presence.location : false),
                                                 ((presence.status) ? presence.status : false)
                                                 ));
+    });
+};
+
+Circuit.prototype.subscribePresence = function(userIds) {
+    const _self = this;
+    return new Promise((resolve, reject) => {
+        if (!userIds instanceof Array) {
+            reject('not an array:' + userIds);
+            return;
+        }
+        _self.ws.send(getSubscribePresenceMsg(_self, resolve, reject, JSON.stringify(userIds)));
     });
 };
 

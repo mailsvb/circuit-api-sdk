@@ -204,6 +204,15 @@ con.login()
                 console.error(err);
             });
         
+        // subscribe presence state of users
+        con.subscribePresence(['12345678-90ab-cdef-1234-567890abcdef'])
+            .then(res => {
+                console.log(res);
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        
         // update User
         con.updateUser({userId:'12345678-90ab-cdef-1234-567890abcdef',firstName:'John',lastName:'Doe'})
             .then(res => {
