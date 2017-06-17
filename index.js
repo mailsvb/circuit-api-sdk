@@ -9,21 +9,6 @@ const entities      = new Entities();
 const user_agent    = 'Mozilla/5.0 (Linux; 1.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome apisdk/1.0';
 const allowed_states= ['AVAILABLE', 'OFFLINE', 'BUSY', 'DND', 'AWAY'];
 
-const getDate = function(date) {
-    var now = date || (new Date());
-    var MM = (now.getMonth() + 1);
-        if (MM < 10) { MM = '0' + MM; }
-    var DD = now.getDate();
-        if (DD < 10) { DD = '0' + DD; }
-    var H = now.getHours();
-        if (H < 10) { H = '0' + H; }
-    var M = now.getMinutes();
-        if (M < 10) { M = '0' + M; }
-    var S = now.getSeconds();
-        if (S < 10) { S = '0' + S; }
-    return DD + "." + MM + "." + now.getFullYear() + " - " + H + ":" + M + ":" + S;
-};
-
 const getLogonMsg = function(_self) {
     let r = '{"msgType":"REQUEST","request":{"requestId":' + _self.nextReqID() + ',"type":"USER","user":{"type":"LOGON","logon":{"updateLastAccessTime":true,"securityTokenType":["PERSISTENT_SESSION"]}}}}';
     return r;
@@ -285,7 +270,7 @@ let Circuit = function(data) {
     };
     
     this.getWS = () => {
-        _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\ntrying to connect to API');
+        _self.emit('log', '>>>>> trying to connect to API');
         let wsOptions = {headers: {Cookie: _self.cookie,'User-Agent': user_agent}, rejectUnauthorized: false};
         _self.ws = new NodeWebSocket('wss://' + _self.server + '/api', wsOptions);
         _self.ws.on('open', () => _self.wsopen());
@@ -313,7 +298,7 @@ Circuit.prototype.wsopen = function() {
 Circuit.prototype.wsmessage = function(data, flags) {
     const _self = this;
     try {
-        _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\n' + data.toString());
+        _self.emit('log', '<<<<< ' + data.toString());
         data = JSON.parse(data.toString());
         if (data.msgType == 'RESPONSE' && data.response.type == 'USER' && data.response.user.type == 'GET_STUFF') {
             if (data.response.user.getStuff.user) {
@@ -462,7 +447,7 @@ Circuit.prototype.prepwssend = function(msg) {
 Circuit.prototype.wssend = function(msg) {
     const _self = this;
     _self.ws.send(msg);
-    _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + msg);
+    _self.emit('log', '>>>>> ' + msg);
 };
 
 Circuit.prototype.wserror = function(error) {
@@ -470,18 +455,18 @@ Circuit.prototype.wserror = function(error) {
     if (error.message.match(/401/)) {
         _self.cookie = '';
     }
-    _self.emit('error', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(error.message, { showHidden: true, depth: null, breakLength: 'Infinity' }));
+    _self.emit('error', '>>>>> ' + util.inspect(error.message, { showHidden: true, depth: null, breakLength: 'Infinity' }));
 };
 
 Circuit.prototype.wsping = function(data, flags) {
     const _self = this;
-    _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\nON_PING');
+    _self.emit('log', '<<<<< ON_PING');
     _self.ws.pong('', false, false);
 };
 
 Circuit.prototype.wspong = function(data, flags) {
     const _self = this;
-    _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\nON_PONG');
+    _self.emit('log', '<<<<< ON_PONG');
 };
 
 Circuit.prototype.wsclose = function(code, msg) {
@@ -490,7 +475,7 @@ Circuit.prototype.wsclose = function(code, msg) {
     clearInterval(_self.wspingInterval);
     if (_self.manuallogout === false) {
         _self.reconnecting = true;
-        _self.emit('error', '>>>>> ' + getDate() + ' >>>>>\n' + code);
+        _self.emit('error', '>>>>> ' + code);
         setTimeout(() => {
             if (_self.cookie === '') {
                 _self.getCookie();
@@ -511,11 +496,11 @@ Circuit.prototype.login = function() {
         _self.resolver['login'] = resolve;
         _self.rejecter['login'] = reject;
         if (_self.cookie === null) {
-            _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\nlogin with given credentials at: ' + _self.server);
+            _self.emit('log', '>>>>> login with given credentials at: ' + _self.server);
             _self.getCookie();
         }
         else {
-            _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\nconnecting to API using given cookie: ' + _self.server);
+            _self.emit('log', '>>>>> connecting to API using given cookie: ' + _self.server);
             _self.getWS();
         }
     });
@@ -738,13 +723,13 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
                 'Content-Length': attachment.data.length
             }
         };
-        _self.emit('log', '>>>>> ' + getDate() + ' >>>>>\n' + util.inspect(options, { showHidden: true, depth: null, breakLength: 'Infinity' }));
+        _self.emit('log', '>>>>> ' + util.inspect(options, { showHidden: true, depth: null, breakLength: 'Infinity' }));
         doHttpPost(options, attachment.data, (headers, data, error) => {
             if (!(data instanceof Array) && data.length != 1) {
                 next();
             }
             try {
-                _self.emit('log', '<<<<< ' + getDate() + ' <<<<<\n' + data.toString());
+                _self.emit('log', '<<<<< ' + data.toString());
                 let d = JSON.parse(data.toString())[0];
                 // check from response, which fileid is the new one
                 for (var j=0; j < d.fileid.length; j++) {
