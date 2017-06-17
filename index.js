@@ -295,7 +295,7 @@ Circuit.prototype.wsopen = function() {
     _self.wspingInterval = setInterval(() => {
         if ((parseInt(new Date().getTime()) - _self.lastpong) > 30000) {
             _self.emit('error', '<<<<< PING ERROR');
-            _self.ws.close();
+            _self.ws.terminate();
         }
         else {
             _self.ws.ping('', false, false);
