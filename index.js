@@ -483,6 +483,7 @@ Circuit.prototype.wsclose = function(code, msg) {
     clearInterval(_self.wspingInterval);
     if (_self.manuallogout === false) {
         _self.reconnecting = true;
+        _self.emit('disconnection');
         _self.emit('error', '>>>>> ' + code);
         setTimeout(() => {
             if (_self.cookie === '') {
