@@ -23,8 +23,11 @@ let con = new Circuit({server:'circuitsandbox.net',client_id:'1234567890abcdef12
 con.on('log', console.log);
 con.on('error', console.error);
 
-// listener for reconnection events
+// listener for reconnection events (no data sent on event)
 con.on('reconnection', console.log('reconnected'));
+
+// listener for disconnection events (no data sent on event)
+con.on('disconnection', console.log('disconnected'));
 
 // listener for item added events
 con.on('itemAdded', console.log);
