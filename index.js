@@ -716,7 +716,7 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
     const _self = this;
     let attached = [];
     let allFileIds = [];
-    if (typeof attachments === 'undefined' || !(attachments instanceof Array) || attachments.length <= 0) {
+    if (Array.isArray(attachments) === false || attachments.length <= 0) {
         cb('');
         return;
     }
