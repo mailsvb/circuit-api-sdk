@@ -695,11 +695,16 @@ Circuit.prototype.setVoicemail = function(config) {
 Circuit.prototype.addText = function(convId, msg) {
     const _self = this;
     return new Promise((resolve, reject) => {
+        if (msg instanceof String) {
+            msg = {
+                content: msg
+            };
+        }
         _self.prepareAttachment(((msg.attachments) ? msg.attachments : ''), (attachments) => {
             _self.prepwssend(getAddTextMsg(_self, resolve, reject, convId,
                                             ((msg.parentId) ? msg.parentId : false),
                                             ((msg.subject) ? msg.subject : ''),
-                                            ((msg.content) ? msg.content : ((typeof msg === 'string') ? msg : '')),
+                                            ((msg.content) ? msg.content : ''),
                                             ((msg.mentions) ? JSON.stringify(msg.mentions) : false),
                                             ((attachments instanceof Array && attachments.length > 0) ? JSON.stringify(attachments) : false)
                                         ));
@@ -734,26 +739,28 @@ Circuit.prototype.prepareAttachment = function(attachments, cb) {
         };
         _self.emit('log', '>>>>> ' + util.inspect(options, { showHidden: true, depth: null, breakLength: 'Infinity' }));
         doHttpPost(options, attachment.data, (headers, data, error) => {
-            if (!(data instanceof Array) && data.length != 1) {
-                next();
-            }
+            _self.emit('log', '<<<<< ' + data.toString());
             try {
-                _self.emit('log', '<<<<< ' + data.toString());
-                let d = JSON.parse(data.toString())[0];
-                // check from response, which fileid is the new one
-                for (var j=0; j < d.fileid.length; j++) {
-                    if (allFileIds.indexOf(d.fileid[j]) < 0) {
-                        allFileIds.push(d.fileid[j]);
-                        break;
+                data = JSON.parse(data.toString());
+                if (data instanceof Array && data.length == 1) {
+                    data = data[0];
+                    for (var j=0; j < data.fileid.length; j++) {
+                        if (allFileIds.indexOf(data.fileid[j]) < 0) {
+                            allFileIds.push(data.fileid[j]);
+                            break;
+                        }
                     }
+                    attached.push({
+                        itemId: data.id,
+                        fileId: data.fileid[j],
+                        fileName: attachment.name,
+                        mimeType: data.mimeType,
+                        size: attachment.data.length
+                    });
                 }
-                attached.push({
-                    itemId: d.id,
-                    fileId: d.fileid[j],
-                    fileName: attachment.name,
-                    mimeType: d.mimeType,
-                    size: attachment.data.length
-                });
+                else {
+                    _self.emit('error', 'error handling file api response');
+                }
                 next();
             }
             catch(e) {
