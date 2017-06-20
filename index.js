@@ -695,7 +695,7 @@ Circuit.prototype.setVoicemail = function(config) {
 Circuit.prototype.addText = function(convId, msg) {
     const _self = this;
     return new Promise((resolve, reject) => {
-        if (msg instanceof String) {
+        if (typeof msg === 'string') {
             msg = {
                 content: msg
             };
