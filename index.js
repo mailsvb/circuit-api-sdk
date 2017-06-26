@@ -171,6 +171,7 @@ let Circuit = function(data) {
     this.lastpong       = 0;
     this.loginattempts  = 0;
     this.reqID          = 0;
+    this.logindelay     = 0;
     this.server         = data.server;
     this.persistent     = data.persistent || false;
     if (data.username && data.password) {
@@ -195,6 +196,13 @@ let Circuit = function(data) {
         this.reqID += 1;
         return this.reqID;
     };
+    
+    this.getLoginDelay = () => {
+        if (this.logindelay < 60000) {
+            this.logindelay += 10000;
+        }
+        return this.logindelay;
+    }
     
     this.getCookie = () => {
         _self.loginattempts += 1;
@@ -288,6 +296,7 @@ Circuit.prototype.wsopen = function() {
     const _self = this;
     _self.connected = true;
     _self.loginattempts = 0;
+    _self.logindelay = 0;
     _self.lastpong = parseInt(new Date().getTime());
     _self.prepwssend(getLogonMsg(_self));
     _self.prepwssend(getStartupMsg(_self));
@@ -491,7 +500,7 @@ Circuit.prototype.wsclose = function(code, msg) {
             } else {
                 _self.getWS();
             }
-        }, 5000);
+        }, _self.getLoginDelay());
     }
 };
 
