@@ -1,5 +1,8 @@
 # circuit-api-sdk
 
+**!! INFO !!**
+This is not an official SDK. It is only for testing purposes. If you are developing an application for Circuit, use the official SDK.
+
 Install:
 ```bash
 git clone https://github.com/mailsvb/circuit-api-sdk.git
