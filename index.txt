@@ -202,7 +202,7 @@ let Circuit = function(data) {
         let options = {
             hostname: this.server,
             port: 443,
-            path: '/mobilelogin',
+            path: '/login',
             method: 'POST',
             rejectUnauthorized: false,
             headers: {
@@ -268,7 +268,7 @@ let Circuit = function(data) {
     this.getWS = () => {
         _self.emit('log', '>>>>> trying to connect to API');
         let wsOptions = {headers: {Cookie: _self.cookie,'User-Agent': user_agent}, rejectUnauthorized: false};
-        _self.ws = new NodeWebSocket('wss://' + _self.server + '/api', wsOptions);
+        _self.ws = new NodeWebSocket('wss://' + _self.server + '/api?clientVersion=1.2.5402', wsOptions);
         _self.ws.on('open', () => _self.wsopen());
         _self.ws.on('message', (data, flags) => _self.wsmessage(data, flags));
         _self.ws.on('error', (error) => _self.wserror(error));
